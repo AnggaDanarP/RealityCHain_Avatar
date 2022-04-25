@@ -2,4 +2,4 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { DemoProject } from "./DemoProject";
-export type { DemoTokenNft } from "./DemoTokenNft";
+export type { ProjectDemo } from "./ProjectDemo";

@@ -2,4 +2,4 @@
 /* tslint:disable */
 /* eslint-disable */
 export { DemoProject__factory } from "./DemoProject__factory";
-export { DemoTokenNft__factory } from "./DemoTokenNft__factory";
+export { ProjectDemo__factory } from "./ProjectDemo__factory";

@@ -41,9 +41,9 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.DemoProject__factory>;
     getContractFactory(
-      name: "DemoTokenNft",
+      name: "ProjectDemo",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.DemoTokenNft__factory>;
+    ): Promise<Contracts.ProjectDemo__factory>;
     getContractFactory(
       name: "ERC721A",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -85,10 +85,10 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.DemoProject>;
     getContractAt(
-      name: "DemoTokenNft",
+      name: "ProjectDemo",
       address: string,
       signer?: ethers.Signer
-    ): Promise<Contracts.DemoTokenNft>;
+    ): Promise<Contracts.ProjectDemo>;
     getContractAt(
       name: "ERC721A",
       address: string,
