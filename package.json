@@ -1,0 +1,63 @@
+{
+  "name": "hardhat-project",
+  "description": "This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.",
+  "version": "1.0.0",
+  "main": ".eslintrc.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "accounts": "hardhat accounts",
+    "rename-contract": "hardhat rename-contract",
+    "compile": "hardhat compile --force",
+    "test": "hardhat test",
+    "test-extended": "EXTENDED_TESTS=1 hardhat test",
+    "test-gas": "REPORT_GAS=1 hardhat test",
+    "local-node": "hardhat node",
+    "root-hash": "hardhat generate-root-hash",
+    "proof": "hardhat generate-proof",
+    "deploy": "hardhat run scripts/1_deploy.ts",
+    "verify": "hardhat verify --constructor-args config/ContractArguments.ts",
+    "whitelist-open": "hardhat run scripts/2_whitelist_open.ts",
+    "whitelist-close": "hardhat run scripts/3_whitelist_close.ts",
+    "presale-open": "hardhat run scripts/4_presale_open.ts",
+    "presale-close": "hardhat run scripts/5_presale_close.ts",
+    "public-sale-open": "hardhat run scripts/6_public_sale_open.ts",
+    "public-sale-close": "hardhat run scripts/7_public_sale_close.ts",
+    "reveal": "hardhat run scripts/8_reveal.ts",
+    "withdraw": "hardhat run scripts/9_withdraw.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.5.0",
+    "@typechain/truffle-v5": "^8.0.0",
+    "@types/chai": "^4.3.1",
+    "@types/chai-as-promised": "^7.1.5",
+    "@types/mocha": "^9.1.0",
+    "@types/node": "^17.0.24",
+    "chai-as-promised": "^7.1.1",
+    "dotenv": "^16.0.0",
+    "hardhat": "^2.9.3",
+    "solidity-coverage": "^0.7.20"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.5",
+    "@nomiclabs/hardhat-etherscan": "^3.0.3",
+    "@nomiclabs/hardhat-waffle": "^2.0.3",
+    "@typechain/ethers-v5": "^10.0.0",
+    "@typechain/hardhat": "^6.0.0",
+    "chai": "^4.3.6",
+    "erc721a": "^3.2.0",
+    "ethereum-waffle": "^3.4.4",
+    "ethers": "^5.0.0",
+    "hardhat-gas-reporter": "^1.0.8",
+    "keccak256": "^1.0.6",
+    "merkletreejs": "^0.2.27",
+    "ts-node": "^10.7.0",
+    "typechain": "^8.0.0",
+    "typescript": "^4.6.3"
+  }
+}
