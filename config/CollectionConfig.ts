@@ -6,9 +6,9 @@ import whitelistAddress from "./whitelist.json";
 const CollectionConfig: CollectionConfigInterface = {
     testnet: Networks.ethereumTestnet,
     mainnet: Networks.ethereumMainnet,
-    contractName: "ProjectDemo",
-    tokenName: "ProjectDemo",
-    tokenSymbol: "DPT",
+    contractName: "NftProjectDemo",
+    tokenName: "NftProjectDemo",
+    tokenSymbol: "NPD",
     hiddenMetadataUri: "ipfs://QmPBX69iesmJa5xajwNzHvHNrRFsvWdEtAvQ9AatM78GVo/hidden.json",
     maxSupply: 10,
     whitelistSale: {
@@ -17,14 +17,14 @@ const CollectionConfig: CollectionConfigInterface = {
     },
     preSale: {
         price: 0.07,
-        maxMintAmountPerTx: 2,
+        maxMintAmountPerTx: 4,
     }, 
     publicSale: {
         price: 0.09,
-        maxMintAmountPerTx: 3,
+        maxMintAmountPerTx: 2,
     },
-    contractAddress: "0xE49a60DE8C2208630b046c7cd618585fba966a68",
-    marketplaceIdentifier: "Demo-Token-Project",
+    contractAddress: "0x914A2f844ce2a3f8A802ee672d84D4Bd4B365DD1",
+    marketplaceIdentifier: "This-is-only-a-test",
     marketplaceConfig: Marketpalce.openSea,
     whiteListAddresses: whitelistAddress,
 };

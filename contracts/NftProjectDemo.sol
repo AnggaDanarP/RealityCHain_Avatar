@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract ProjectDemo is ERC721A, Ownable, ReentrancyGuard {
+contract NftProjectDemo is ERC721A, Ownable, ReentrancyGuard {
 
     using Strings for uint256;
 
