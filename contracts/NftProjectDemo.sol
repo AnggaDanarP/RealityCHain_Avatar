@@ -148,7 +148,9 @@ contract NftProjectDemo is ERC721A, Ownable, ReentrancyGuard {
     }
 
     function withdraw() public onlyOwner nonReentrant {
-        (bool os, ) = payable(owner()).call{value: address(this).balance}("");
-        require(os, "Withdraw is failed");
+        uint balance = address(this).balance;
+        require(balance > 0, "No funds to withdraw");
+        (bool os, ) = payable(owner()).call{value: balance}("");
+        require(os, "Withdrawal failed");
     }
 }
