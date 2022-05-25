@@ -14,9 +14,12 @@ export default interface CollectionConfigInterface {
     tokenSymbol: string;
     hiddenMetadataUri: string;
     maxSupply: number;
+    maxSupplyPreSale: number;
+    maxSupplyPublicSale: number;
     whitelistSale: SaleConfig;
     preSale: SaleConfig;
-    publicSale: SaleConfig;
+    publicSale1: SaleConfig;
+    publicSale2: SaleConfig;
     contractAddress: string|null;
     whiteListAddresses: string[];
     marketplaceIdentifier: string;

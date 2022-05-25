@@ -33,17 +33,22 @@ export interface DemoProjectInterface extends utils.Interface {
     "balanceOf(address)": FunctionFragment;
     "cost()": FunctionFragment;
     "getApproved(uint256)": FunctionFragment;
+    "giftMint(uint256,address)": FunctionFragment;
     "hiddenMetadataUri()": FunctionFragment;
     "isApprovedForAll(address,address)": FunctionFragment;
     "maxMintAmountPerTx()": FunctionFragment;
     "maxSupply()": FunctionFragment;
+    "maxSupplyPreSale()": FunctionFragment;
+    "maxSupplyPublicSale()": FunctionFragment;
     "merkleRoot()": FunctionFragment;
-    "mint(uint256)": FunctionFragment;
-    "mintForAddress(uint256,address)": FunctionFragment;
     "name()": FunctionFragment;
     "owner()": FunctionFragment;
     "ownerOf(uint256)": FunctionFragment;
     "paused()": FunctionFragment;
+    "preSaleMint(uint256,bytes32[])": FunctionFragment;
+    "preSaleMinted()": FunctionFragment;
+    "publicMint(uint256)": FunctionFragment;
+    "publicSaleMinted()": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
     "revealed()": FunctionFragment;
     "safeTransferFrom(address,address,uint256)": FunctionFragment;
@@ -68,9 +73,8 @@ export interface DemoProjectInterface extends utils.Interface {
     "uriSuffix()": FunctionFragment;
     "walletOfOwner(address)": FunctionFragment;
     "whitelistClaimed(address)": FunctionFragment;
-    "whitelistMint(uint256,bytes32[])": FunctionFragment;
     "whitelistMintEnable()": FunctionFragment;
-    "withdraw()": FunctionFragment;
+    "withdrawFunds()": FunctionFragment;
   };
 
   getFunction(
@@ -79,17 +83,22 @@ export interface DemoProjectInterface extends utils.Interface {
       | "balanceOf"
       | "cost"
       | "getApproved"
+      | "giftMint"
       | "hiddenMetadataUri"
       | "isApprovedForAll"
       | "maxMintAmountPerTx"
       | "maxSupply"
+      | "maxSupplyPreSale"
+      | "maxSupplyPublicSale"
       | "merkleRoot"
-      | "mint"
-      | "mintForAddress"
       | "name"
       | "owner"
       | "ownerOf"
       | "paused"
+      | "preSaleMint"
+      | "preSaleMinted"
+      | "publicMint"
+      | "publicSaleMinted"
       | "renounceOwnership"
       | "revealed"
       | "safeTransferFrom(address,address,uint256)"
@@ -114,9 +123,8 @@ export interface DemoProjectInterface extends utils.Interface {
       | "uriSuffix"
       | "walletOfOwner"
       | "whitelistClaimed"
-      | "whitelistMint"
       | "whitelistMintEnable"
-      | "withdraw"
+      | "withdrawFunds"
   ): FunctionFragment;
 
   encodeFunctionData(
@@ -128,6 +136,10 @@ export interface DemoProjectInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "getApproved",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "giftMint",
+    values: [BigNumberish, string]
   ): string;
   encodeFunctionData(
     functionFragment: "hiddenMetadataUri",
@@ -143,13 +155,16 @@ export interface DemoProjectInterface extends utils.Interface {
   ): string;
   encodeFunctionData(functionFragment: "maxSupply", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "merkleRoot",
+    functionFragment: "maxSupplyPreSale",
     values?: undefined
   ): string;
-  encodeFunctionData(functionFragment: "mint", values: [BigNumberish]): string;
   encodeFunctionData(
-    functionFragment: "mintForAddress",
-    values: [BigNumberish, string]
+    functionFragment: "maxSupplyPublicSale",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "merkleRoot",
+    values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "name", values?: undefined): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
@@ -158,6 +173,22 @@ export interface DemoProjectInterface extends utils.Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "paused", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "preSaleMint",
+    values: [BigNumberish, BytesLike[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "preSaleMinted",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "publicMint",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "publicSaleMinted",
+    values?: undefined
+  ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
@@ -240,14 +271,13 @@ export interface DemoProjectInterface extends utils.Interface {
     values: [string]
   ): string;
   encodeFunctionData(
-    functionFragment: "whitelistMint",
-    values: [BigNumberish, BytesLike[]]
-  ): string;
-  encodeFunctionData(
     functionFragment: "whitelistMintEnable",
     values?: undefined
   ): string;
-  encodeFunctionData(functionFragment: "withdraw", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "withdrawFunds",
+    values?: undefined
+  ): string;
 
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
@@ -256,6 +286,7 @@ export interface DemoProjectInterface extends utils.Interface {
     functionFragment: "getApproved",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "giftMint", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "hiddenMetadataUri",
     data: BytesLike
@@ -269,16 +300,32 @@ export interface DemoProjectInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "maxSupply", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "merkleRoot", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "mint", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "mintForAddress",
+    functionFragment: "maxSupplyPreSale",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "maxSupplyPublicSale",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "merkleRoot", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "ownerOf", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "paused", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "preSaleMint",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "preSaleMinted",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "publicMint", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "publicSaleMinted",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "renounceOwnership",
     data: BytesLike
@@ -355,14 +402,13 @@ export interface DemoProjectInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "whitelistMint",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "whitelistMintEnable",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "withdraw", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "withdrawFunds",
+    data: BytesLike
+  ): Result;
 
   events: {
     "Approval(address,address,uint256)": EventFragment;
@@ -467,6 +513,12 @@ export interface DemoProject extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[string]>;
 
+    giftMint(
+      _mintAmount: BigNumberish,
+      _receiver: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
     hiddenMetadataUri(overrides?: CallOverrides): Promise<[string]>;
 
     isApprovedForAll(
@@ -479,18 +531,11 @@ export interface DemoProject extends BaseContract {
 
     maxSupply(overrides?: CallOverrides): Promise<[BigNumber]>;
 
+    maxSupplyPreSale(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    maxSupplyPublicSale(overrides?: CallOverrides): Promise<[BigNumber]>;
+
     merkleRoot(overrides?: CallOverrides): Promise<[string]>;
-
-    mint(
-      _mintAmount: BigNumberish,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
-    mintForAddress(
-      _mintAmount: BigNumberish,
-      _receiver: string,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
 
     name(overrides?: CallOverrides): Promise<[string]>;
 
@@ -502,6 +547,21 @@ export interface DemoProject extends BaseContract {
     ): Promise<[string]>;
 
     paused(overrides?: CallOverrides): Promise<[boolean]>;
+
+    preSaleMint(
+      _mintAmount: BigNumberish,
+      _merkleProof: BytesLike[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    preSaleMinted(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    publicMint(
+      _mintAmount: BigNumberish,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    publicSaleMinted(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -615,15 +675,9 @@ export interface DemoProject extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[boolean]>;
 
-    whitelistMint(
-      _mintAmount: BigNumberish,
-      _merkleProof: BytesLike[],
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
     whitelistMintEnable(overrides?: CallOverrides): Promise<[boolean]>;
 
-    withdraw(
+    withdrawFunds(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
@@ -643,6 +697,12 @@ export interface DemoProject extends BaseContract {
     overrides?: CallOverrides
   ): Promise<string>;
 
+  giftMint(
+    _mintAmount: BigNumberish,
+    _receiver: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
   hiddenMetadataUri(overrides?: CallOverrides): Promise<string>;
 
   isApprovedForAll(
@@ -655,18 +715,11 @@ export interface DemoProject extends BaseContract {
 
   maxSupply(overrides?: CallOverrides): Promise<BigNumber>;
 
+  maxSupplyPreSale(overrides?: CallOverrides): Promise<BigNumber>;
+
+  maxSupplyPublicSale(overrides?: CallOverrides): Promise<BigNumber>;
+
   merkleRoot(overrides?: CallOverrides): Promise<string>;
-
-  mint(
-    _mintAmount: BigNumberish,
-    overrides?: PayableOverrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  mintForAddress(
-    _mintAmount: BigNumberish,
-    _receiver: string,
-    overrides?: PayableOverrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
 
   name(overrides?: CallOverrides): Promise<string>;
 
@@ -675,6 +728,21 @@ export interface DemoProject extends BaseContract {
   ownerOf(tokenId: BigNumberish, overrides?: CallOverrides): Promise<string>;
 
   paused(overrides?: CallOverrides): Promise<boolean>;
+
+  preSaleMint(
+    _mintAmount: BigNumberish,
+    _merkleProof: BytesLike[],
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  preSaleMinted(overrides?: CallOverrides): Promise<BigNumber>;
+
+  publicMint(
+    _mintAmount: BigNumberish,
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  publicSaleMinted(overrides?: CallOverrides): Promise<BigNumber>;
 
   renounceOwnership(
     overrides?: Overrides & { from?: string | Promise<string> }
@@ -782,15 +850,9 @@ export interface DemoProject extends BaseContract {
 
   whitelistClaimed(arg0: string, overrides?: CallOverrides): Promise<boolean>;
 
-  whitelistMint(
-    _mintAmount: BigNumberish,
-    _merkleProof: BytesLike[],
-    overrides?: PayableOverrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
   whitelistMintEnable(overrides?: CallOverrides): Promise<boolean>;
 
-  withdraw(
+  withdrawFunds(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -810,6 +872,12 @@ export interface DemoProject extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>;
 
+    giftMint(
+      _mintAmount: BigNumberish,
+      _receiver: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     hiddenMetadataUri(overrides?: CallOverrides): Promise<string>;
 
     isApprovedForAll(
@@ -822,15 +890,11 @@ export interface DemoProject extends BaseContract {
 
     maxSupply(overrides?: CallOverrides): Promise<BigNumber>;
 
+    maxSupplyPreSale(overrides?: CallOverrides): Promise<BigNumber>;
+
+    maxSupplyPublicSale(overrides?: CallOverrides): Promise<BigNumber>;
+
     merkleRoot(overrides?: CallOverrides): Promise<string>;
-
-    mint(_mintAmount: BigNumberish, overrides?: CallOverrides): Promise<void>;
-
-    mintForAddress(
-      _mintAmount: BigNumberish,
-      _receiver: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
 
     name(overrides?: CallOverrides): Promise<string>;
 
@@ -839,6 +903,21 @@ export interface DemoProject extends BaseContract {
     ownerOf(tokenId: BigNumberish, overrides?: CallOverrides): Promise<string>;
 
     paused(overrides?: CallOverrides): Promise<boolean>;
+
+    preSaleMint(
+      _mintAmount: BigNumberish,
+      _merkleProof: BytesLike[],
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    preSaleMinted(overrides?: CallOverrides): Promise<BigNumber>;
+
+    publicMint(
+      _mintAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    publicSaleMinted(overrides?: CallOverrides): Promise<BigNumber>;
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
@@ -932,15 +1011,9 @@ export interface DemoProject extends BaseContract {
 
     whitelistClaimed(arg0: string, overrides?: CallOverrides): Promise<boolean>;
 
-    whitelistMint(
-      _mintAmount: BigNumberish,
-      _merkleProof: BytesLike[],
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     whitelistMintEnable(overrides?: CallOverrides): Promise<boolean>;
 
-    withdraw(overrides?: CallOverrides): Promise<void>;
+    withdrawFunds(overrides?: CallOverrides): Promise<void>;
   };
 
   filters: {
@@ -1003,6 +1076,12 @@ export interface DemoProject extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    giftMint(
+      _mintAmount: BigNumberish,
+      _receiver: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
     hiddenMetadataUri(overrides?: CallOverrides): Promise<BigNumber>;
 
     isApprovedForAll(
@@ -1015,18 +1094,11 @@ export interface DemoProject extends BaseContract {
 
     maxSupply(overrides?: CallOverrides): Promise<BigNumber>;
 
+    maxSupplyPreSale(overrides?: CallOverrides): Promise<BigNumber>;
+
+    maxSupplyPublicSale(overrides?: CallOverrides): Promise<BigNumber>;
+
     merkleRoot(overrides?: CallOverrides): Promise<BigNumber>;
-
-    mint(
-      _mintAmount: BigNumberish,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
-    mintForAddress(
-      _mintAmount: BigNumberish,
-      _receiver: string,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
 
     name(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1038,6 +1110,21 @@ export interface DemoProject extends BaseContract {
     ): Promise<BigNumber>;
 
     paused(overrides?: CallOverrides): Promise<BigNumber>;
+
+    preSaleMint(
+      _mintAmount: BigNumberish,
+      _merkleProof: BytesLike[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    preSaleMinted(overrides?: CallOverrides): Promise<BigNumber>;
+
+    publicMint(
+      _mintAmount: BigNumberish,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    publicSaleMinted(overrides?: CallOverrides): Promise<BigNumber>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -1151,15 +1238,9 @@ export interface DemoProject extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    whitelistMint(
-      _mintAmount: BigNumberish,
-      _merkleProof: BytesLike[],
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
     whitelistMintEnable(overrides?: CallOverrides): Promise<BigNumber>;
 
-    withdraw(
+    withdrawFunds(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
@@ -1183,6 +1264,12 @@ export interface DemoProject extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    giftMint(
+      _mintAmount: BigNumberish,
+      _receiver: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
     hiddenMetadataUri(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     isApprovedForAll(
@@ -1197,18 +1284,13 @@ export interface DemoProject extends BaseContract {
 
     maxSupply(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    maxSupplyPreSale(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    maxSupplyPublicSale(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     merkleRoot(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    mint(
-      _mintAmount: BigNumberish,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
-    mintForAddress(
-      _mintAmount: BigNumberish,
-      _receiver: string,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
 
     name(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
@@ -1220,6 +1302,21 @@ export interface DemoProject extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     paused(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    preSaleMint(
+      _mintAmount: BigNumberish,
+      _merkleProof: BytesLike[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    preSaleMinted(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    publicMint(
+      _mintAmount: BigNumberish,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    publicSaleMinted(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -1333,17 +1430,11 @@ export interface DemoProject extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    whitelistMint(
-      _mintAmount: BigNumberish,
-      _merkleProof: BytesLike[],
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
     whitelistMintEnable(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    withdraw(
+    withdrawFunds(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

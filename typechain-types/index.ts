@@ -3,6 +3,8 @@
 /* eslint-disable */
 import type * as openzeppelin from "./@openzeppelin";
 export type { openzeppelin };
+import type * as contractLibs from "./contract-libs";
+export type { contractLibs };
 import type * as contracts from "./contracts";
 export type { contracts };
 import type * as erc721A from "./erc721a";
@@ -20,9 +22,11 @@ export type { ERC165 } from "./@openzeppelin/contracts/utils/introspection/ERC16
 export { ERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/ERC165__factory";
 export type { IERC165 } from "./@openzeppelin/contracts/utils/introspection/IERC165";
 export { IERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/IERC165__factory";
-export type { NftProjectDemo } from "./contracts/NftProjectDemo";
-export { NftProjectDemo__factory } from "./factories/contracts/NftProjectDemo__factory";
-export type { SemogaBerhasil } from "./contracts/SemogaBerhasil";
-export { SemogaBerhasil__factory } from "./factories/contracts/SemogaBerhasil__factory";
+export type { Withdrawable } from "./contract-libs/Withdrawable";
+export { Withdrawable__factory } from "./factories/contract-libs/Withdrawable__factory";
+export type { DemoGagalNFT } from "./contracts/DemoGagalNFT";
+export { DemoGagalNFT__factory } from "./factories/contracts/DemoGagalNFT__factory";
+export type { DemoProject } from "./contracts/DemoProject";
+export { DemoProject__factory } from "./factories/contracts/DemoProject__factory";
 export type { ERC721A } from "./erc721a/contracts/ERC721A";
 export { ERC721A__factory } from "./factories/erc721a/contracts/ERC721A__factory";

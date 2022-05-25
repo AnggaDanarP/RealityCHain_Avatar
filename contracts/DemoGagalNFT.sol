@@ -5,8 +5,9 @@ import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "../contract-libs/Withdrawable.sol";
 
-contract NftProjectDemo is ERC721A, Ownable, ReentrancyGuard {
+contract DemoGagalNFT is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
 
     using Strings for uint256;
 
@@ -19,29 +20,38 @@ contract NftProjectDemo is ERC721A, Ownable, ReentrancyGuard {
 
     uint256 public cost;
     uint256 public maxSupply;
+    uint256 public maxSupplyPreSale;
+    uint256 public maxSupplyPublicSale;
     uint256 public maxMintAmountPerTx;
 
     bool public paused = true;
     bool public whitelistMintEnable = false;
     bool public revealed = false;
 
+    uint256 public preSaleMinted = 0;
+    uint256 public publicSaleMinted = 0;
+
     constructor(
         string memory _tokenName,
         string memory _tokenSymbol,
         uint256 _cost,
         uint256 _maxSupply,
+        uint256 _maxSupplyPreSale,
+        uint256 _maxSupplyPublicSale,
         uint256 _maxMintAmountPerTx,
         string memory _hiddenMetadataUri
     ) ERC721A(_tokenName, _tokenSymbol) {
         setCost(_cost);
         maxSupply = _maxSupply;
+        maxSupplyPreSale = _maxSupplyPreSale;
+        maxSupplyPublicSale = _maxSupplyPublicSale;
         setMaxMintAmountPerTx(_maxMintAmountPerTx);
         setHiddenMetadataUri(_hiddenMetadataUri);
     }
 
     modifier mintCompliance(uint _mintAmount) {
         require(_mintAmount > 0 && _mintAmount <= maxMintAmountPerTx, "Invalid mint amount!");
-        require(totalSupply() + _mintAmount <= maxSupply, "Max supply exceeded!");
+        require(preSaleMinted + publicSaleMinted + _mintAmount <= maxSupply, "Max supply exceeded!");
         _;
     }
 
@@ -50,22 +60,30 @@ contract NftProjectDemo is ERC721A, Ownable, ReentrancyGuard {
         _;
     }
 
-    function whitelistMint(uint256 _mintAmount, bytes32[] calldata _merkleProof) public payable mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
+    function preSaleMint(uint256 _mintAmount, bytes32[] calldata _merkleProof) public payable mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
+        require(preSaleMinted + _mintAmount <= maxSupplyPreSale, "Max pre-sale supply exceeded!");
         require(whitelistMintEnable, "Whitelist sale is not enabled!");
         require(!whitelistClaimed[_msgSender()], "Address already claimed");
         bytes32 leafe = keccak256(abi.encodePacked(_msgSender()));
         require(MerkleProof.verify(_merkleProof, merkleRoot, leafe), "Invalid Proof");
 
         whitelistClaimed[_msgSender()] = true;
+        preSaleMinted += _mintAmount;
+
         _safeMint(_msgSender(), _mintAmount);
     }
 
-    function mint(uint256 _mintAmount) public payable mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
+    function publicMint(uint256 _mintAmount) public payable mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
         require(!paused, "The contract is paused!");
+        require(publicSaleMinted + _mintAmount <= maxSupplyPublicSale, "Max public supply exceeded!");
+
+        publicSaleMinted += _mintAmount;
+
         _safeMint(_msgSender(), _mintAmount);
     }
 
-    function mintForAddress(uint256 _mintAmount, address _receiver) public payable mintCompliance(_mintAmount) onlyOwner {
+    function giftMint(uint256 _mintAmount, address _receiver) public onlyOwner mintCompliance(_mintAmount) {
+        publicSaleMinted += _mintAmount;
         _safeMint(_receiver, _mintAmount);
     }
 
@@ -147,11 +165,4 @@ contract NftProjectDemo is ERC721A, Ownable, ReentrancyGuard {
         return uriPrefix;
     }
 
-    function withdraw() public onlyOwner nonReentrant {
-        uint balance = address(this).balance;
-        require(balance > 0, "No funds to withdraw");
-        
-        (bool os, ) = payable(owner()).call{value: balance}("");
-        require(os, "Withdrawal failed");
-    }
 }
