@@ -2,4 +2,4 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { DemoGagalNFT } from "./DemoGagalNFT";
-export type { DemoProject } from "./DemoProject";
+export type { NFTDemoProject } from "./NFTDemoProject";

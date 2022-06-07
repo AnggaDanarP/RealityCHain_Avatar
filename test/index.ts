@@ -42,6 +42,8 @@ function getPrice(saleType: SaleType, mintAmount: number) {
   return utils.parseEther(saleType.toString()).mul(mintAmount);
 }
 
+const gassfee = {gasPrice: utils.parseUnits('100', 'gwei'), gasLimit: 1000000};
+
 describe(CollectionConfig.contractName, function () {
   let owner!: SignerWithAddress;
   let whitelistedUser!: SignerWithAddress;
@@ -57,7 +59,7 @@ describe(CollectionConfig.contractName, function () {
     const Contract = await ethers.getContractFactory(CollectionConfig.contractName, owner);
     contract = await Contract.deploy(...ContractArguments) as NftContractType;
 
-    await contract.deployed(), {gasLimit: BigNumber.from('0xffffffffffffffff')};
+    await contract.deployed(), gassfee;
   });
 
   it("Check initial data", async function () {
@@ -87,8 +89,8 @@ describe(CollectionConfig.contractName, function () {
     await expect(contract.connect(owner).preSaleMint(1, [], {value: getPrice(SaleType.WHITELIST, 1)})).to.be.revertedWith('Whitelist sale is not enabled!');
 
     // the owner should always be able to run mintAddress
-    await (await contract.giftMint(1, await owner.getAddress())).wait(), {gasLimit: BigNumber.from('0xffffffffffffffff')};
-    await (await contract.giftMint(1, await whitelistedUser.getAddress())).wait(), {gasLimit: BigNumber.from('0xffffffffffffffff')};
+    await (await contract.giftMint(1, await owner.getAddress())).wait(), {gasPrice: utils.parseUnits('100', 'gwei'), gasLimit: 1000000};
+    await (await contract.giftMint(1, await whitelistedUser.getAddress())).wait(), {gasPrice: utils.parseUnits('100', 'gwei'), gasLimit: 1000000};
     // But not over the maxMintAmountPerTx
     await expect(contract.giftMint(
       (await contract.maxMintAmountPerTx()).add(1),
