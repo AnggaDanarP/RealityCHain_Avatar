@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../contract-libs/Withdrawable.sol";
 
-contract DemoGagalNFT is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
+contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
 
     using Strings for uint256;
 
