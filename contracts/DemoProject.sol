@@ -43,11 +43,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../contract-libs/Withdrawable.sol";
-import "contract-libs/@rarible/royalties/contracts/impl/RoyaltiesV2Impl.sol";
-import "contract-libs/@rarible/royalties/contracts/LibPart.sol";
-import "contract-libs/@rarible/royalties/contracts/RoyaltiesV2.sol";
+// import "contract-libs/@rarible/royalties/contracts/impl/RoyaltiesV2Impl.sol";
+// import "contract-libs/@rarible/royalties/contracts/LibPart.sol";
+// import "contract-libs/@rarible/royalties/contracts/RoyaltiesV2.sol";
 
-contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable, RoyaltiesV2Impl {
+contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
 
     using Strings for uint256;
 
@@ -212,35 +212,35 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable, Royalti
     // https://github.com/rarible/protocol-contracts/tree/master/royalties/contracts
     //
 
-    function setRoyalties(uint _tokenId, address payable _royaltiesRecipientAddress, uint96 _percentageBasisPoints) public onlyOwner {
-        LibPart.Part[] memory _royalties = new LibPart.Part[](1);
-        _royalties[0].value = _percentageBasisPoints;
-        _royalties[0].account = _royaltiesRecipientAddress;
-        _saveRoyalties(_tokenId, _royalties);
-    }
+    // function setRoyalties(uint _tokenId, address payable _royaltiesRecipientAddress, uint96 _percentageBasisPoints) public onlyOwner {
+    //     LibPart.Part[] memory _royalties = new LibPart.Part[](1);
+    //     _royalties[0].value = _percentageBasisPoints;
+    //     _royalties[0].account = _royaltiesRecipientAddress;
+    //     _saveRoyalties(_tokenId, _royalties);
+    // }
 
 
-    //configure royalties for Mintable using the ERC2981 standard
-    function royaltyInfo(uint256 _tokenId, uint256 _salePrice) external view returns (address receiver, uint256 royaltyAmount) {
-      //use the same royalties that were saved for Rariable
-      LibPart.Part[] memory _royalties = royalties[_tokenId];
-      if(_royalties.length > 0) {
-        return (_royalties[0].account, (_salePrice * _royalties[0].value) / 10000);
-      }
-      return (address(0), 0);
-    }
+    // //configure royalties for Mintable using the ERC2981 standard
+    // function royaltyInfo(uint256 _tokenId, uint256 _salePrice) external view returns (address receiver, uint256 royaltyAmount) {
+    //   //use the same royalties that were saved for Rariable
+    //   LibPart.Part[] memory _royalties = royalties[_tokenId];
+    //   if(_royalties.length > 0) {
+    //     return (_royalties[0].account, (_salePrice * _royalties[0].value) / 10000);
+    //   }
+    //   return (address(0), 0);
+    // }
 
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721A) returns (bool) {
-        if(interfaceId == LibRoyaltiesV2._INTERFACE_ID_ROYALTIES) {
-            return true;
-        }
+    // function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721A) returns (bool) {
+    //     if(interfaceId == LibRoyaltiesV2._INTERFACE_ID_ROYALTIES) {
+    //         return true;
+    //     }
 
-        if(interfaceId == _INTERFACE_ID_ERC2981) {
-          return true;
-        }
+    //     if(interfaceId == _INTERFACE_ID_ERC2981) {
+    //       return true;
+    //     }
 
-        return super.supportsInterface(interfaceId);
-    }
+    //     return super.supportsInterface(interfaceId);
+    // }
 
 }
