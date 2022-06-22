@@ -1,4 +1,41 @@
-// SPDX-License-Identifier: MIT
+/**
+SPDX-License-Identifier: MIT
+////////////////////////////
+//////////////////////////
+////////////////////////
+//////////////////////
+////////////////////
+//////////////////
+////////////////
+//////////////
+////////////
+//////////
+////////
+//////
+////
+ ▄█          ▄████████    ▄████████    ▄██████▄  ███    █▄     ▄████████       ▄██████▄     ▄████████         ▄██████▄  ███    █▄     ▄████████    ▄████████ ████████▄   ▄█     ▄████████ ███▄▄▄▄      ▄████████      
+███         ███    ███   ███    ███   ███    ███ ███    ███   ███    ███      ███    ███   ███    ███        ███    ███ ███    ███   ███    ███   ███    ███ ███   ▀███ ███    ███    ███ ███▀▀▀██▄   ███    ███      
+███         ███    █▀    ███    ███   ███    █▀  ███    ███   ███    █▀       ███    ███   ███    █▀         ███    █▀  ███    ███   ███    ███   ███    ███ ███    ███ ███▌   ███    ███ ███   ███   ███    █▀       
+███        ▄███▄▄▄       ███    ███  ▄███        ███    ███  ▄███▄▄▄          ███    ███  ▄███▄▄▄           ▄███        ███    ███   ███    ███  ▄███▄▄▄▄██▀ ███    ███ ███▌   ███    ███ ███   ███   ███             
+███       ▀▀███▀▀▀     ▀███████████ ▀▀███ ████▄  ███    ███ ▀▀███▀▀▀          ███    ███ ▀▀███▀▀▀          ▀▀███ ████▄  ███    ███ ▀███████████ ▀▀███▀▀▀▀▀   ███    ███ ███▌ ▀███████████ ███   ███ ▀███████████      
+███         ███    █▄    ███    ███   ███    ███ ███    ███   ███    █▄       ███    ███   ███               ███    ███ ███    ███   ███    ███ ▀███████████ ███    ███ ███    ███    ███ ███   ███          ███      
+███▌    ▄   ███    ███   ███    ███   ███    ███ ███    ███   ███    ███      ███    ███   ███               ███    ███ ███    ███   ███    ███   ███    ███ ███   ▄███ ███    ███    ███ ███   ███    ▄█    ███      
+█████▄▄██   ██████████   ███    █▀    ████████▀  ████████▀    ██████████       ▀██████▀    ███               ████████▀  ████████▀    ███    █▀    ███    ███ ████████▀  █▀     ███    █▀   ▀█   █▀   ▄████████▀       
+▀                                                                                                                                                 ███    ███                                                          
+//////////
+///////////                                                             
+////////////
+/////////////
+//////////////
+///////////////
+/////////////////
+//////////////////
+///////////////////
+////////////////////
+/////////////////////
+//////////////////////
+///////////////////////
+*/
 pragma solidity ^0.8.0;
 
 import "erc721a/contracts/ERC721A.sol";
@@ -6,8 +43,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../contract-libs/Withdrawable.sol";
+import "contract-libs/@rarible/royalties/contracts/impl/RoyaltiesV2Impl.sol";
+import "contract-libs/@rarible/royalties/contracts/LibPart.sol";
+import "contract-libs/@rarible/royalties/contracts/RoyaltiesV2.sol";
 
-contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
+contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable, RoyaltiesV2Impl {
 
     using Strings for uint256;
 
@@ -19,39 +59,38 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
     string public hiddenMetadataUri;
 
     uint256 public cost;
-    uint256 public maxSupply;
-    uint256 public maxSupplyPreSale;
-    uint256 public maxSupplyPublicSale;
     uint256 public maxMintAmountPerTx;
+
+    uint256 public constant MAX_SUPPLY = 100;
+    uint256 public constant MAX_SUPPLY_GIFT = 10;
+    uint256 public constant MAX_SUPPLY_PRE_SALE = 40;
+    uint256 public constant MAX_SUPPLY_PUBLIC_SALE = MAX_SUPPLY - (MAX_SUPPLY_GIFT + MAX_SUPPLY_PRE_SALE);
 
     bool public paused = true;
     bool public whitelistMintEnable = false;
     bool public revealed = false;
 
-    uint256 public preSaleMinted = 0;
-    uint256 public publicSaleMinted = 0;
+    uint256 private giftMinted = 0;
+    uint256 private preSaleMinted = 0;
+    uint256 private publicSaleMinted = 0;
+
+    bytes4 private constant _INTERFACE_ID_ERC2981 = 0x2a55205a;
 
     constructor(
         string memory _tokenName,
         string memory _tokenSymbol,
         uint256 _cost,
-        uint256 _maxSupply,
-        uint256 _maxSupplyPreSale,
-        uint256 _maxSupplyPublicSale,
         uint256 _maxMintAmountPerTx,
         string memory _hiddenMetadataUri
     ) ERC721A(_tokenName, _tokenSymbol) {
         setCost(_cost);
-        maxSupply = _maxSupply;
-        maxSupplyPreSale = _maxSupplyPreSale;
-        maxSupplyPublicSale = _maxSupplyPublicSale;
         setMaxMintAmountPerTx(_maxMintAmountPerTx);
         setHiddenMetadataUri(_hiddenMetadataUri);
     }
 
     modifier mintCompliance(uint _mintAmount) {
         require(_mintAmount > 0 && _mintAmount <= maxMintAmountPerTx, "Invalid mint amount!");
-        require(preSaleMinted + publicSaleMinted + _mintAmount <= maxSupply, "Max supply exceeded!");
+        require(totalSupply() <= MAX_SUPPLY, "Max supply exceeded!");
         _;
     }
 
@@ -60,10 +99,12 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
         _;
     }
 
-    function preSaleMint(uint256 _mintAmount, bytes32[] calldata _merkleProof) public payable mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
-        require(preSaleMinted + _mintAmount <= maxSupplyPreSale, "Max pre-sale supply exceeded!");
+    function preSaleMint(uint256 _mintAmount, bytes32[] calldata _merkleProof) public payable nonReentrant mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
+        require(preSaleMinted + _mintAmount <= MAX_SUPPLY_PRE_SALE, "Max pre-sale supply exceeded!");
+        
         require(whitelistMintEnable, "Whitelist sale is not enabled!");
         require(!whitelistClaimed[_msgSender()], "Address already claimed");
+        
         bytes32 leafe = keccak256(abi.encodePacked(_msgSender()));
         require(MerkleProof.verify(_merkleProof, merkleRoot, leafe), "Invalid Proof");
 
@@ -73,17 +114,18 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
         _safeMint(_msgSender(), _mintAmount);
     }
 
-    function publicMint(uint256 _mintAmount) public payable mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
+    function publicMint(uint256 _mintAmount) public payable nonReentrant mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
         require(!paused, "The contract is paused!");
-        require(publicSaleMinted + _mintAmount <= maxSupplyPublicSale, "Max public supply exceeded!");
+        require(publicSaleMinted + _mintAmount <= MAX_SUPPLY_PUBLIC_SALE, "Max public sale supply exceeded!");
 
         publicSaleMinted += _mintAmount;
-
         _safeMint(_msgSender(), _mintAmount);
     }
 
-    function giftMint(uint256 _mintAmount, address _receiver) public onlyOwner mintCompliance(_mintAmount) {
-        publicSaleMinted += _mintAmount;
+    function giftMint(uint256 _mintAmount, address _receiver) public nonReentrant onlyOwner mintCompliance(_mintAmount) {
+        require(giftMinted + _mintAmount <= MAX_SUPPLY_GIFT, "Max gift supply exceeded!");
+
+        giftMinted += _mintAmount;
         _safeMint(_receiver, _mintAmount);
     }
 
@@ -163,6 +205,42 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
 
     function _baseURI() internal view virtual override returns (string memory) {
         return uriPrefix;
+    }
+
+    //
+    // Royalties
+    // https://github.com/rarible/protocol-contracts/tree/master/royalties/contracts
+    //
+
+    function setRoyalties(uint _tokenId, address payable _royaltiesRecipientAddress, uint96 _percentageBasisPoints) public onlyOwner {
+        LibPart.Part[] memory _royalties = new LibPart.Part[](1);
+        _royalties[0].value = _percentageBasisPoints;
+        _royalties[0].account = _royaltiesRecipientAddress;
+        _saveRoyalties(_tokenId, _royalties);
+    }
+
+
+    //configure royalties for Mintable using the ERC2981 standard
+    function royaltyInfo(uint256 _tokenId, uint256 _salePrice) external view returns (address receiver, uint256 royaltyAmount) {
+      //use the same royalties that were saved for Rariable
+      LibPart.Part[] memory _royalties = royalties[_tokenId];
+      if(_royalties.length > 0) {
+        return (_royalties[0].account, (_salePrice * _royalties[0].value) / 10000);
+      }
+      return (address(0), 0);
+    }
+
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721A) returns (bool) {
+        if(interfaceId == LibRoyaltiesV2._INTERFACE_ID_ROYALTIES) {
+            return true;
+        }
+
+        if(interfaceId == _INTERFACE_ID_ERC2981) {
+          return true;
+        }
+
+        return super.supportsInterface(interfaceId);
     }
 
 }
