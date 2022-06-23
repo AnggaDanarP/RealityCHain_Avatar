@@ -74,7 +74,13 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
     uint256 private preSaleMinted = 0;
     uint256 private publicSaleMinted = 0;
 
-    bytes4 private constant _INTERFACE_ID_ERC2981 = 0x2a55205a;
+    //bytes4 private constant _INTERFACE_ID_ERC2981 = 0x2a55205a;
+
+    struct TokenBatchRefund {
+        uint256 price;
+        uint256 qtyMinted;
+    }
+    mapping(address => TokenBatchRefund[]) public userTokenBtachRefund;
 
     constructor(
         string memory _tokenName,
@@ -99,17 +105,60 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
         _;
     }
 
+    // Refund the user for a token batch
+    function _claimRefund() external {
+        require(whitelistMintEnable, "Refund time is passed");
+
+        uint256 totalRefund = _totaltReturn(msg.sender);
+        require(address(this).balance >= (totalRefund), "Insufficient funds");
+
+        removeListRefund(msg.sender);
+        payable(msg.sender).transfer(totalRefund);
+    }
+
+    function _totaltReturn(address buyer) private view returns (uint256) {
+        uint256 _price = 0;
+        uint256 _qtyMinted = 0;
+
+        TokenBatchRefund[] storage histories = userTokenBtachRefund[buyer];
+
+        for (uint256 i = 0; i < histories.length; i++) {
+            _price = histories[i].price;
+            _qtyMinted = histories[i].qtyMinted;
+        }
+
+        return  _price * _qtyMinted;
+    }
+
+    function removeListRefund(address _buyer) private {
+        TokenBatchRefund[] storage histories = userTokenBtachRefund[_buyer];
+
+        for (uint256 i = 0; i < histories.length; i++) {
+            histories.pop();
+        }
+    }
+
+    function _leafe(address _minter) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_minter));
+    }
+
+    function _isWhitelisted(address _minter, bytes32[] calldata _merkleProof, bytes32 _merkleRoot) private pure returns (bool) {
+        return MerkleProof.verify(_merkleProof, _merkleRoot, _leafe(_minter));
+    }
+
     function preSaleMint(uint256 _mintAmount, bytes32[] calldata _merkleProof) public payable nonReentrant mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
-        require(preSaleMinted + _mintAmount <= MAX_SUPPLY_PRE_SALE, "Max pre-sale supply exceeded!");
-        
         require(whitelistMintEnable, "Whitelist sale is not enabled!");
+
+        require(_isWhitelisted(msg.sender, _merkleProof, merkleRoot), "Invalid proof");
         require(!whitelistClaimed[_msgSender()], "Address already claimed");
         
-        bytes32 leafe = keccak256(abi.encodePacked(_msgSender()));
-        require(MerkleProof.verify(_merkleProof, merkleRoot, leafe), "Invalid Proof");
+        require(preSaleMinted + _mintAmount <= MAX_SUPPLY_PRE_SALE, "Max pre-sale supply exceeded!");
 
         whitelistClaimed[_msgSender()] = true;
         preSaleMinted += _mintAmount;
+
+        TokenBatchRefund[] storage histories = userTokenBtachRefund[msg.sender];
+        histories.push(TokenBatchRefund(cost, _mintAmount));
 
         _safeMint(_msgSender(), _mintAmount);
     }
