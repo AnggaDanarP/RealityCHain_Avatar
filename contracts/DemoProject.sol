@@ -42,12 +42,11 @@ import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "../contract-libs/Withdrawable.sol";
 // import "contract-libs/@rarible/royalties/contracts/impl/RoyaltiesV2Impl.sol";
 // import "contract-libs/@rarible/royalties/contracts/LibPart.sol";
 // import "contract-libs/@rarible/royalties/contracts/RoyaltiesV2.sol";
 
-contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
+contract DemoProject is ERC721A, Ownable, ReentrancyGuard {
 
     using Strings for uint256;
 
@@ -55,7 +54,7 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
     mapping(address => bool) public whitelistClaimed;
 
     string public uriPrefix = "";
-    string public uriSuffix = ".json";
+    string public constant URI_SUFFIX = ".json";
     string public hiddenMetadataUri;
 
     uint256 public cost;
@@ -70,17 +69,15 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
     bool public whitelistMintEnable = false;
     bool public revealed = false;
 
+    uint256 private constant REFUND_PERIOED = 2 days;
+    uint256 private refundEndTime;
+    mapping(uint256 => bool) public hashRefund;
+
     uint256 private giftMinted = 0;
     uint256 private preSaleMinted = 0;
     uint256 private publicSaleMinted = 0;
 
     //bytes4 private constant _INTERFACE_ID_ERC2981 = 0x2a55205a;
-
-    struct TokenBatchRefund {
-        uint256 price;
-        uint256 qtyMinted;
-    }
-    mapping(address => TokenBatchRefund[]) public userTokenBtachRefund;
 
     constructor(
         string memory _tokenName,
@@ -105,39 +102,28 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
         _;
     }
 
+    // 
     // Refund the user for a token batch
-    function _claimRefund() external {
-        require(whitelistMintEnable, "Refund time is passed");
+    //
+   
+    function refund(uint256[] calldata tokenIds) external {
+        require(isRefundActive(), "Refund expired");
 
-        uint256 totalRefund = _totaltReturn(msg.sender);
-        require(address(this).balance >= (totalRefund), "Insufficient funds");
-
-        removeListRefund(msg.sender);
-        payable(msg.sender).transfer(totalRefund);
-    }
-
-    function _totaltReturn(address buyer) private view returns (uint256) {
-        uint256 _price = 0;
-        uint256 _qtyMinted = 0;
-
-        TokenBatchRefund[] storage histories = userTokenBtachRefund[buyer];
-
-        for (uint256 i = 0; i < histories.length; i++) {
-            _price = histories[i].price;
-            _qtyMinted = histories[i].qtyMinted;
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            uint256 tokenId = tokenIds[i];
+            require(msg.sender == ownerOf(tokenId), "Not token owner");
+            require(!hashRefund[tokenId], "Already refunded");
+            hashRefund[tokenId] = true;
+            transferFrom(msg.sender, owner(), tokenId);
         }
 
-        return  _price * _qtyMinted;
+        uint256 refundAmount = tokenIds.length * cost;
+        Address.sendValue(payable(msg.sender), refundAmount);
     }
 
-    function removeListRefund(address _buyer) private {
-        TokenBatchRefund[] storage histories = userTokenBtachRefund[_buyer];
-
-        for (uint256 i = 0; i < histories.length; i++) {
-            histories.pop();
-        }
-    }
-
+    // 
+    // Verification whitelist minting
+    //
     function _leafe(address _minter) private pure returns (bytes32) {
         return keccak256(abi.encodePacked(_minter));
     }
@@ -146,6 +132,9 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
         return MerkleProof.verify(_merkleProof, _merkleRoot, _leafe(_minter));
     }
 
+    // 
+    // minting
+    //
     function preSaleMint(uint256 _mintAmount, bytes32[] calldata _merkleProof) public payable nonReentrant mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
         require(whitelistMintEnable, "Whitelist sale is not enabled!");
 
@@ -156,9 +145,6 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
 
         whitelistClaimed[_msgSender()] = true;
         preSaleMinted += _mintAmount;
-
-        TokenBatchRefund[] storage histories = userTokenBtachRefund[msg.sender];
-        histories.push(TokenBatchRefund(cost, _mintAmount));
 
         _safeMint(_msgSender(), _mintAmount);
     }
@@ -212,8 +198,22 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
         }
         string memory currentBaseURI = _baseURI();
         return bytes(currentBaseURI).length > 0
-            ? string(abi.encodePacked(currentBaseURI, _tokenId.toString(), uriSuffix))
+            ? string(abi.encodePacked(currentBaseURI, _tokenId.toString(), URI_SUFFIX))
             : "";
+    }
+
+    function withdrawFunds() external onlyOwner nonReentrant {
+        require(block.timestamp > refundEndTime, "Refund period has not ended yet");
+        require(address(this).balance > 0, "Failed: no funds to withdraw");
+        payable(msg.sender).transfer(address(this).balance);
+    }
+
+    function toggleRefundCountdown() public onlyOwner {
+        refundEndTime = block.timestamp + REFUND_PERIOED;
+    }
+
+    function isRefundActive() public view returns (bool) {
+        return (block.timestamp <= refundEndTime);
     }
 
     function setRevealed(bool _state) public onlyOwner {
@@ -236,9 +236,9 @@ contract DemoProject is ERC721A, Ownable, ReentrancyGuard, Withdrawable {
         uriPrefix = _uriPrefix;
     }
 
-    function setUriSuffix(string memory _uriSuffix) public onlyOwner {
-        uriSuffix = _uriSuffix;
-    }
+    //function setUriSuffix(string memory _uriSuffix) public onlyOwner {
+    //    uriSuffix = _uriSuffix;
+    //}
 
     function setPaused(bool _state) public onlyOwner {
         paused = _state;
