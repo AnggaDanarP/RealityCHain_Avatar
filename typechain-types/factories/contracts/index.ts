@@ -2,4 +2,3 @@
 /* tslint:disable */
 /* eslint-disable */
 export { DemoGagalNFT__factory } from "./DemoGagalNFT__factory";
-export { DemoProject__factory } from "./DemoProject__factory";
