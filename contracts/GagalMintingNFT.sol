@@ -1,40 +1,36 @@
 /**
 SPDX-License-Identifier: MIT
-////////////////////////////
-//////////////////////////
-////////////////////////
-//////////////////////
-////////////////////
-//////////////////
-////////////////
-//////////////
-////////////
-//////////
-////////
-//////
-////
- ▄█          ▄████████    ▄████████    ▄██████▄  ███    █▄     ▄████████       ▄██████▄     ▄████████         ▄██████▄  ███    █▄     ▄████████    ▄████████ ████████▄   ▄█     ▄████████ ███▄▄▄▄      ▄████████      
-███         ███    ███   ███    ███   ███    ███ ███    ███   ███    ███      ███    ███   ███    ███        ███    ███ ███    ███   ███    ███   ███    ███ ███   ▀███ ███    ███    ███ ███▀▀▀██▄   ███    ███      
-███         ███    █▀    ███    ███   ███    █▀  ███    ███   ███    █▀       ███    ███   ███    █▀         ███    █▀  ███    ███   ███    ███   ███    ███ ███    ███ ███▌   ███    ███ ███   ███   ███    █▀       
-███        ▄███▄▄▄       ███    ███  ▄███        ███    ███  ▄███▄▄▄          ███    ███  ▄███▄▄▄           ▄███        ███    ███   ███    ███  ▄███▄▄▄▄██▀ ███    ███ ███▌   ███    ███ ███   ███   ███             
-███       ▀▀███▀▀▀     ▀███████████ ▀▀███ ████▄  ███    ███ ▀▀███▀▀▀          ███    ███ ▀▀███▀▀▀          ▀▀███ ████▄  ███    ███ ▀███████████ ▀▀███▀▀▀▀▀   ███    ███ ███▌ ▀███████████ ███   ███ ▀███████████      
-███         ███    █▄    ███    ███   ███    ███ ███    ███   ███    █▄       ███    ███   ███               ███    ███ ███    ███   ███    ███ ▀███████████ ███    ███ ███    ███    ███ ███   ███          ███      
-███▌    ▄   ███    ███   ███    ███   ███    ███ ███    ███   ███    ███      ███    ███   ███               ███    ███ ███    ███   ███    ███   ███    ███ ███   ▄███ ███    ███    ███ ███   ███    ▄█    ███      
-█████▄▄██   ██████████   ███    █▀    ████████▀  ████████▀    ██████████       ▀██████▀    ███               ████████▀  ████████▀    ███    █▀    ███    ███ ████████▀  █▀     ███    █▀   ▀█   █▀   ▄████████▀       
-▀                                                                                                                                                 ███    ███                                                          
-//////////
-///////////                                                             
-////////////
+///////////////////////////
+/////////////////////////
+///////////////////////
+/////////////////////
+///////////////////
+/////////////////
+///////////////
 /////////////
+///////////
+/////////
+///////
+/////
+///
+██      ███████  █████   ██████  ██    ██ ███████      ██████  ███████      ██████  ██    ██  █████  ██████  ██████  ██  █████  ███    ██ ███████ 
+██      ██      ██   ██ ██       ██    ██ ██          ██    ██ ██          ██       ██    ██ ██   ██ ██   ██ ██   ██ ██ ██   ██ ████   ██ ██      
+██      █████   ███████ ██   ███ ██    ██ █████       ██    ██ █████       ██   ███ ██    ██ ███████ ██████  ██   ██ ██ ███████ ██ ██  ██ ███████ 
+██      ██      ██   ██ ██    ██ ██    ██ ██          ██    ██ ██          ██    ██ ██    ██ ██   ██ ██   ██ ██   ██ ██ ██   ██ ██  ██ ██      ██ 
+███████ ███████ ██   ██  ██████   ██████  ███████      ██████  ██           ██████   ██████  ██   ██ ██   ██ ██████  ██ ██   ██ ██   ████ ███████ 
+///////
+////////                                                             
+/////////
+//////////
+///////////
+////////////
 //////////////
 ///////////////
+////////////////
 /////////////////
 //////////////////
 ///////////////////
 ////////////////////
-/////////////////////
-//////////////////////
-///////////////////////
 */
 pragma solidity ^0.8.0;
 
@@ -47,7 +43,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // import "contract-libs/@rarible/royalties/contracts/RoyaltiesV2.sol";
 // import "contract-libs/@rarible/royalties/contracts/LibPart.sol";
 
-contract DemoGagalNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
+contract GagalMintingNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
 
     using Strings for uint256;
 
@@ -66,9 +62,8 @@ contract DemoGagalNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
     uint256 public constant MAX_SUPPLY_PRE_SALE = 40;
     uint256 public constant MAX_SUPPLY_PUBLIC_SALE = 50;
 
-    uint256 public refundEndTime;
+    bool public refundEndTime = false;
     mapping(uint256 => bool) private hashRefund;
-    uint256 private constant REFUND_PERIOED = 2 days;
 
     bool public paused = true;
     bool public revealed = false;
@@ -155,12 +150,13 @@ contract DemoGagalNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
     //
     // Refund feature
     //
-    function toggleRefundCountdown() external onlyOwner {
-        refundEndTime = block.timestamp + REFUND_PERIOED;
+    function setOpenForRefund(bool _refundEndTime) external onlyOwner {
+        require(whitelistMintEnable, "Only for whitelist sale!");
+        refundEndTime = _refundEndTime;
     }
 
     function refund(uint256[] calldata tokenIds) external nonReentrant {
-        require(block.timestamp <= refundEndTime, "Refund expired");
+        require(refundEndTime && paused, "Refund expired");
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
             uint256 tokenId = tokenIds[i];
@@ -178,7 +174,7 @@ contract DemoGagalNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
     // Withdraw feature
     //
     function withdraw() external onlyOwner nonReentrant {
-        require(block.timestamp > refundEndTime, "Refund period has not ended yet");
+        require(!refundEndTime && !whitelistMintEnable, "Not in the right time");
         require(address(this).balance > 0, "Failed: no funds to withdraw");
         payable(msg.sender).transfer(address(this).balance);
     }

@@ -6,9 +6,9 @@ import whitelistAddress from "./whitelist.json";
 const CollectionConfig: CollectionConfigInterface = {
     testnet: Networks.ethereumTestnet,
     mainnet: Networks.ethereumMainnet,
-    contractName: "DemoGagalNFT",
-    tokenName: "DemoGagalNFT",
-    tokenSymbol: "onlyDemo",
+    contractName: "GagalMintingNFT",
+    tokenName: "GagalMintingNFT",
+    tokenSymbol: "GmN",
     hiddenMetadataUri: "ipfs://QmSsAWYz5VSswPqwveyPwyKKxnqFC5q85aLyhHqpazpFCp/hidden.json",
     maxSupply: 100,
     whitelistSale: {
@@ -23,7 +23,7 @@ const CollectionConfig: CollectionConfigInterface = {
         price: 0.08,
         maxMintAmountPerTx: 3,
     },
-    contractAddress: "0x6a69591C3007448B3B9c3dcD598793AfE83D55e8",
+    contractAddress: "0x66517ca409BEFBFd50c6BcC0B5e2a7da2630Cb84",
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
     whiteListAddresses: whitelistAddress,

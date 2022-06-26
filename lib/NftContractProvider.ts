@@ -1,4 +1,4 @@
-import { DemoGagalNFT as ContractType } from '../typechain-types/index';
+import { GagalMintingNFT as ContractType } from '../typechain-types/index';
 
 import { ethers } from "hardhat";
 import CollectionConfig from "./../config/CollectionConfig";

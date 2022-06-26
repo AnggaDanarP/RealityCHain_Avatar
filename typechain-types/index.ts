@@ -20,8 +20,10 @@ export type { ERC165 } from "./@openzeppelin/contracts/utils/introspection/ERC16
 export { ERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/ERC165__factory";
 export type { IERC165 } from "./@openzeppelin/contracts/utils/introspection/IERC165";
 export { IERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/IERC165__factory";
-export type { DemoGagalNFT } from "./contracts/DemoGagalNFT";
-export { DemoGagalNFT__factory } from "./factories/contracts/DemoGagalNFT__factory";
+export type { GagalMintingNFT } from "./contracts/GagalMintingNFT";
+export { GagalMintingNFT__factory } from "./factories/contracts/GagalMintingNFT__factory";
+export type { MintingGagalNFT } from "./contracts/MintingGagalNFT";
+export { MintingGagalNFT__factory } from "./factories/contracts/MintingGagalNFT__factory";
 export type { ERC721A } from "./erc721a/contracts/ERC721A";
 export { ERC721A__factory } from "./factories/erc721a/contracts/ERC721A__factory";
 export type { ERC721AQueryable } from "./erc721a/contracts/extensions/ERC721AQueryable";
