@@ -115,6 +115,11 @@ const config: HardhatUserConfig = {
       timeout: 60000,
       gasMultiplier: DEFAULT_GAS_MULTIPLIER,
     },
+    ganache: {
+      url: 'http://172.29.96.1:7545',
+      timeout: 60000,
+      gasMultiplier: DEFAULT_GAS_MULTIPLIER,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
