@@ -110,13 +110,14 @@ describe(CollectionConfig.contractName, function () {
     await expect(contract.connect(owner).withdraw()).to.be.revertedWith('Failed: no funds to withdraw');
 
     // the owner should always be able to run mintAddress
-    await (await contract.giftMint(1, await owner.getAddress())).wait(), {gasPrice: utils.parseUnits('100', 'gwei'), gasLimit: 1000000};
-    await (await contract.giftMint(1, await whitelistedUser.getAddress())).wait(), {gasPrice: utils.parseUnits('100', 'gwei'), gasLimit: 1000000};
+    await (await contract.giftMint([1], [await owner.getAddress()])).wait(), {gasPrice: utils.parseUnits('100', 'gwei'), gasLimit: 1000000};
+    await (await contract.giftMint([1], [await whitelistedUser.getAddress()])).wait(), {gasPrice: utils.parseUnits('100', 'gwei'), gasLimit: 1000000};
     // But not over the maxMintAmountPerTx
+    const restOfSupplyGift = [(await contract.MAX_SUPPLY_GIFT()).sub(await contract.giftMinted()).add(1)] as [BigNumber];
     await expect(contract.giftMint(
-      (await contract.maxMintAmountPerTx()).add(1),
-      await holder.getAddress(),
-    )).to.be.revertedWith('Invalid mint amount!');
+      restOfSupplyGift,
+      [await holder.getAddress()],
+    )).to.be.revertedWith('Max gift supply exceeded!');
 
     // check balance
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
@@ -225,7 +226,7 @@ describe(CollectionConfig.contractName, function () {
   });
 
   it('Owner only functions', async function () {
-    await expect(contract.connect(externalUser).giftMint(1, await externalUser.getAddress())).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(contract.connect(externalUser).giftMint([1], [await externalUser.getAddress()])).to.be.revertedWith('Ownable: caller is not the owner');
     await expect(contract.connect(externalUser).setRevealed(false)).to.be.revertedWith('Ownable: caller is not the owner');
     await expect(contract.connect(externalUser).setCost(utils.parseEther('0.0000001'))).to.be.revertedWith('Ownable: caller is not the owner');
     await expect(contract.connect(externalUser).setMaxMintAmountPerTx(99999)).to.be.revertedWith('Ownable: caller is not the owner');
@@ -277,22 +278,18 @@ describe(CollectionConfig.contractName, function () {
   });
 
   it('Wallet of owner', async function () {
-    expect(await contract.tokensOfOwner(await owner.getAddress())).deep.equal([
-      BigNumber.from(1),
-      BigNumber.from(6), // get from refund
-    ]);
+    // check wallet of owner
+    expect(await owner.getAddress()).to.equal(await contract.ownerOf(1));
+    expect(await owner.getAddress()).to.equal(await contract.ownerOf(6)); // from refund
     
-    expect(await contract.tokensOfOwner(await whitelistedUser.getAddress())).deep.equal([
-      BigNumber.from(2),
-      BigNumber.from(3),
-    ]);
-    
-    expect(await contract.tokensOfOwner(await holder.getAddress())).deep.equal([
-      BigNumber.from(4),
-      BigNumber.from(5),
-    ]);
-    
-    expect(await contract.tokensOfOwner(await externalUser.getAddress())).deep.equal([]);
+    // check wallet of whitelisted user
+    expect(await whitelistedUser.getAddress()).to.equal(await contract.ownerOf(2));
+    expect(await whitelistedUser.getAddress()).to.equal(await contract.ownerOf(3));
+
+    // check wallet of holders
+    expect(await holder.getAddress()).to.equal(await contract.ownerOf(4));
+    expect(await holder.getAddress()).to.equal(await contract.ownerOf(5));
+
   });
     
   it('Supply checks (long)', async function () {
@@ -321,22 +318,19 @@ describe(CollectionConfig.contractName, function () {
 
     // Mint last tokens with owner address and test walletOfOwner(...)
     await contract.connect(owner).publicMint(lastPublicMintAmount, {value: getPrice(SaleType.PUBLIC_SALE, lastPublicMintAmount)}); 
-    const expectedWalletOfOwner = [ BigNumber.from(1), BigNumber.from(6), ]; // add token 6 from refund
+    const expectedWalletOfOwner = [ 1, 6, ]; // add token 6 from refund
     
     for (const i of [...Array(lastPublicMintAmount).keys()].reverse()) {
-      expectedWalletOfOwner.push(BigNumber.from(
+      expectedWalletOfOwner.push(
           CollectionConfig.maxSupply - 
           (BigNumber.from(await contract.MAX_SUPPLY_PRE_SALE()).toNumber() + BigNumber.from(await contract.MAX_SUPPLY_GIFT()).toNumber()) - 
-          i + publicBeforeMintedAll 
-        ));
+          i + publicBeforeMintedAll);
     }
-    expect(await contract.tokensOfOwner(
-      await owner.getAddress(),
-      {
-        // Set gas limit to the maximum value since this function should be used off-chain only and it would fail otherwise...
-        gasLimit: BigNumber.from('0xffffffffffffffff'),
-      },
-    )).deep.equal(expectedWalletOfOwner);  // ===== error =====
+
+    // check for the all the tokens minted from the owner
+    for (const i of [...Array(expectedWalletOfOwner.length).keys()].reverse()) {
+      expect(await contract.ownerOf(expectedWalletOfOwner[i])).to.equal(await owner.getAddress()), gassfee;
+    } 
 
     // final checking supply
     const giftFinalMinted = BigNumber.from(await contract.giftMinted()).toNumber();

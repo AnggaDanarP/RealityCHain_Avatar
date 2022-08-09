@@ -2,3 +2,4 @@
 /* tslint:disable */
 /* eslint-disable */
 export * as erc721 from "./ERC721";
+export * as common from "./common";

@@ -36,20 +36,19 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "erc721a/contracts/extensions/ERC721AQueryable.sol";
+import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-// import "contract-libs/Cost.sol";
-// import "contract-libs/@rarible/royalties/contracts/impl/RoyaltiesV2Impl.sol";
-// import "contract-libs/@rarible/royalties/contracts/RoyaltiesV2.sol";
-// import "contract-libs/@rarible/royalties/contracts/LibPart.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "erc721a/contracts/ERC721A.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
-contract GagalMintingNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
+contract MintingNftCitayem is ERC721A, ERC2981, Ownable, ReentrancyGuard {
 
     using Strings for uint256;
 
     string public uriPrefix = "";
     string public hiddenMetadataUri;
-    string public constant URI_SUFFIX = ".json";
 
     bytes32 public merkleRoot;
     mapping(address => bool) public whitelistClaimed;
@@ -73,7 +72,9 @@ contract GagalMintingNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
     uint256 public preSaleMinted = 0;
     uint256 public publicSaleMinted = 0;
 
-    //bytes4 private constant _INTERFACE_ID_ERC2981 = 0x2a55205a;
+    address private constant WALLET_A = 0x69a31266321e78670F1Ea24CA57c772259C679ad;
+    address private constant WALLET_B = 0xB940062cf4afb9068623F23d974E02268015186a;
+    address private constant WALLET_C = 0xfa1656f6785718BaE8A8790DBd91433Cd566dF8f;
 
     constructor(
         string memory _tokenName,
@@ -87,6 +88,7 @@ contract GagalMintingNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
         maxSupply = _maxSupply;
         setMaxMintAmountPerTx(_maxMintAmountPerTx);
         setHiddenMetadataUri(_hiddenMetadataUri);
+        _setDefaultRoyalty(0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18, 500); 
     }
 
     modifier mintCompliance(uint _mintAmount) {
@@ -140,11 +142,13 @@ contract GagalMintingNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
         _safeMint(_msgSender(), _mintAmount);
     }
 
-    function giftMint(uint256 _mintAmount, address _receiver) public nonReentrant onlyOwner mintCompliance(_mintAmount) {
-        require(giftMinted + _mintAmount <= MAX_SUPPLY_GIFT, "Max gift supply exceeded!");
+    function giftMint(uint256[] calldata _mintAmount, address[] calldata _receiver) public nonReentrant onlyOwner {
+        for(uint256 i; i < _receiver.length; i++) {
+            require(giftMinted + _mintAmount[i] <= MAX_SUPPLY_GIFT, "Max gift supply exceeded!");
 
-        giftMinted += _mintAmount;
-        _safeMint(_receiver, _mintAmount);
+            giftMinted += _mintAmount[i];
+            _safeMint(_receiver[i], _mintAmount[i]);
+        }
     }
 
     //
@@ -167,7 +171,7 @@ contract GagalMintingNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
         }
 
         uint256 refundAmount = tokenIds.length * cost;
-        Address.sendValue(payable(msg.sender), refundAmount);
+        sendValue(payable(msg.sender), refundAmount);
     }
 
     //
@@ -176,7 +180,20 @@ contract GagalMintingNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
     function withdraw() external onlyOwner nonReentrant {
         require(!refundEndTime && !whitelistMintEnable, "Not in the right time");
         require(address(this).balance > 0, "Failed: no funds to withdraw");
-        payable(msg.sender).transfer(address(this).balance);
+        uint256 walletBalanceA = address(this).balance * 50 / 100;
+        uint256 walletBalanceB = address(this).balance * 30 / 100;
+        uint256 walletBalanceC = address(this).balance * 20 / 100;
+
+        sendValue(payable(WALLET_A), walletBalanceA);
+        sendValue(payable(WALLET_B), walletBalanceB);
+        sendValue(payable(WALLET_C), walletBalanceC);
+    }
+
+    function sendValue(address payable _to, uint256 amount) internal {
+        require(address(this).balance >= amount, "Address: insufficient balance");
+
+        (bool success, ) = _to.call{value: amount}("");
+        require(success, "Address: failed to send value");
     }
 
     // 
@@ -189,7 +206,7 @@ contract GagalMintingNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
         }
         string memory currentBaseURI = _baseURI();
         return bytes(currentBaseURI).length > 0
-            ? string(abi.encodePacked(currentBaseURI, _tokenId.toString(), URI_SUFFIX))
+            ? string(abi.encodePacked(currentBaseURI, _tokenId.toString(), ".json"))
             : "";
     }
 
@@ -200,10 +217,6 @@ contract GagalMintingNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
     function setUriPrefix(string memory _uriPrefix) public onlyOwner {
         uriPrefix = _uriPrefix;
     }
-
-    // function setUriSuffix(string memory _uriSuffix) public onlyOwner {
-    //    uriSuffix = _uriSuffix;
-    // }
 
     function _baseURI() internal view virtual override returns (string memory) {
         return uriPrefix;
@@ -239,41 +252,9 @@ contract GagalMintingNFT is ERC721AQueryable, Ownable, ReentrancyGuard {
         whitelistMintEnable = _state;
     }
 
-
-    //
-    // Royalties
-    // https://github.com/rarible/protocol-contracts/tree/master/royalties/contracts
-    //
-
-    // function setRoyalties(uint _tokenId, address payable _royaltiesRecipientAddress, uint96 _percentageBasisPoints) public onlyOwner {
-    //     LibPart.Part[] memory _royalties = new LibPart.Part[](1);
-    //     _royalties[0].value = _percentageBasisPoints;
-    //     _royalties[0].account = _royaltiesRecipientAddress;
-    //     _saveRoyalties(_tokenId, _royalties);
-    // }
-
-
-    // //configure royalties for Mintable using the ERC2981 standard
-    // function royaltyInfo(uint256 _tokenId, uint256 _salePrice) external view returns (address receiver, uint256 royaltyAmount) {
-    //   //use the same royalties that were saved for Rariable
-    //   LibPart.Part[] memory _royalties = royalties[_tokenId];
-    //   if(_royalties.length > 0) {
-    //     return (_royalties[0].account, (_salePrice * _royalties[0].value) / 10000);
-    //   }
-    //   return (address(0), 0);
-    // }
-
-
-    // function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721A) returns (bool) {
-    //     if(interfaceId == LibRoyaltiesV2._INTERFACE_ID_ROYALTIES) {
-    //         return true;
-    //     }
-
-    //     if(interfaceId == _INTERFACE_ID_ERC2981) {
-    //       return true;
-    //     }
-
-    //     return super.supportsInterface(interfaceId);
-    // }
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721A, ERC2981) returns (bool) {
+        // IERC165: 0x01ffc9a7, IERC721: 0x80ac58cd, IERC721Metadata: 0x5b5e139f, IERC29081: 0x2a55205a
+        return ERC721A.supportsInterface(interfaceId) || ERC2981.supportsInterface(interfaceId);
+    }
 
 }
