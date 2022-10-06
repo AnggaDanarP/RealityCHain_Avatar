@@ -39,11 +39,10 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "erc721a/contracts/ERC721A.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
-contract MintingNftCitayem is ERC721A, ERC2981, Ownable, ReentrancyGuard {
+contract DemoGagalNft is ERC721AQueryable, ERC2981, Ownable, ReentrancyGuard {
 
     using Strings for uint256;
 
@@ -105,12 +104,9 @@ contract MintingNftCitayem is ERC721A, ERC2981, Ownable, ReentrancyGuard {
     //
     // Verification whitelist
     //
-    function _leafe(address _minter) private pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_minter));
-    }
-
     function _isWhitelisted(address _minter, bytes32[] calldata _merkleProof, bytes32 _merkleRoot) private pure returns (bool) {
-        return MerkleProof.verify(_merkleProof, _merkleRoot, _leafe(_minter));
+        bytes32 _leafe = keccak256(abi.encodePacked((_minter)));
+        return MerkleProof.verify(_merkleProof, _merkleRoot, _leafe);
     }
 
     function setMerkleRoot(bytes32 _merkleRoot) public onlyOwner {
@@ -143,7 +139,7 @@ contract MintingNftCitayem is ERC721A, ERC2981, Ownable, ReentrancyGuard {
     }
 
     function giftMint(uint256[] calldata _mintAmount, address[] calldata _receiver) public nonReentrant onlyOwner {
-        for(uint256 i; i < _receiver.length; i++) {
+        for(uint256 i = 0; i < _receiver.length; i++) {
             require(giftMinted + _mintAmount[i] <= MAX_SUPPLY_GIFT, "Max gift supply exceeded!");
 
             giftMinted += _mintAmount[i];
@@ -171,7 +167,7 @@ contract MintingNftCitayem is ERC721A, ERC2981, Ownable, ReentrancyGuard {
         }
 
         uint256 refundAmount = tokenIds.length * cost;
-        sendValue(payable(msg.sender), refundAmount);
+        Address.sendValue(payable(msg.sender), refundAmount);
     }
 
     //
@@ -184,16 +180,9 @@ contract MintingNftCitayem is ERC721A, ERC2981, Ownable, ReentrancyGuard {
         uint256 walletBalanceB = address(this).balance * 30 / 100;
         uint256 walletBalanceC = address(this).balance * 20 / 100;
 
-        sendValue(payable(WALLET_A), walletBalanceA);
-        sendValue(payable(WALLET_B), walletBalanceB);
-        sendValue(payable(WALLET_C), walletBalanceC);
-    }
-
-    function sendValue(address payable _to, uint256 amount) internal {
-        require(address(this).balance >= amount, "Address: insufficient balance");
-
-        (bool success, ) = _to.call{value: amount}("");
-        require(success, "Address: failed to send value");
+        Address.sendValue(payable(WALLET_A), walletBalanceA);
+        Address.sendValue(payable(WALLET_B), walletBalanceB);
+        Address.sendValue(payable(WALLET_C), walletBalanceC);
     }
 
     // 

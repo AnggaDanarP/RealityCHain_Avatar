@@ -9,6 +9,7 @@ export const hardhatLocal: NetworkConfigInterface = {
     blockExplorer: {
         name: "Block explorer (not available for local chains)",
         generatorContractUrl: (contractAddress: string) => "#",
+        generateTransactionUrl: (transactionAddress: string) => `#`,
     },
 }
 
@@ -21,6 +22,7 @@ export const ethereumTestnet: NetworkConfigInterface = {
     blockExplorer: {
         name: "Etherscan (Rinkeby)",
         generatorContractUrl: (contractAddress: string) => `https://rinkeby.etherscan.io/address/${contractAddress}`,
+        generateTransactionUrl: (transactionAddress: string) => `https://rinkeby.etherscan.io/tx/${transactionAddress}`,
     },
 }
 
@@ -30,6 +32,7 @@ export const ethereumMainnet: NetworkConfigInterface = {
     blockExplorer: {
         name: "Etherscan",
         generatorContractUrl: (contractAddress: string) => `https://etherscan.io/address/${contractAddress}`,
+        generateTransactionUrl: (transactionAddress: string) => `https://etherscan.io/tx/${transactionAddress}`,
     },
 }
 
@@ -42,6 +45,7 @@ export const polygonTestnet: NetworkConfigInterface = {
     blockExplorer: {
         name: "Polygonscan (Mumbai)",
         generatorContractUrl: (contractAddress: string) => `https://mumbai.polygonscan.com/address/${contractAddress}`,
+        generateTransactionUrl: (transactionAddress: string) => `https://mumbai.polygonscan.com/tx/${transactionAddress}`,
     },
 }
 
@@ -51,5 +55,6 @@ export const polygonMainnet: NetworkConfigInterface = {
     blockExplorer: {
         name: "Polygonscan",
         generatorContractUrl: (contractAddress: string) => `https://polygonscan.com/address/${contractAddress}`,
+        generateTransactionUrl: (transactionAddress: string) => `https://polygonscan.com/tx/${transactionAddress}`,
     },
 }

@@ -7,18 +7,18 @@ async function main() {
     const contract = await NftContractProvider.getContract();
 
     // update sale price (if needed)
-    const publicSalePrice = utils.parseEther(CollectionConfig.publicSale1.price.toString());
+    const publicSalePrice = utils.parseEther(CollectionConfig.publicSale.price.toString());
     if (!(await contract.cost()).eq(publicSalePrice)) {
-        console.log(`Updating the token price to ${CollectionConfig.publicSale1.price} ${CollectionConfig.mainnet.symbol}...`);
+        console.log(`Updating the token price to ${CollectionConfig.publicSale.price} ${CollectionConfig.mainnet.symbol}...`);
 
         await (await contract.setCost(publicSalePrice)).wait();
     }
 
     // update max amount per transaction (if needed)
-    if (!(await contract.maxMintAmountPerTx()).eq(CollectionConfig.publicSale1.maxMintAmountPerTx)) {
-        console.log(`Updating the max mint amount per TX to ${CollectionConfig.publicSale1.maxMintAmountPerTx}...`);
+    if (!(await contract.maxMintAmountPerTx()).eq(CollectionConfig.publicSale.maxMintAmountPerTx)) {
+        console.log(`Updating the max mint amount per TX to ${CollectionConfig.publicSale.maxMintAmountPerTx}...`);
 
-        await (await contract.setMaxMintAmountPerTx(CollectionConfig.publicSale1.maxMintAmountPerTx)).wait();
+        await (await contract.setMaxMintAmountPerTx(CollectionConfig.publicSale.maxMintAmountPerTx)).wait();
     }
 
     // Unpause the contract (if needed)

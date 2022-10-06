@@ -7,7 +7,7 @@ async function main() {
     // Withdraw function
     console.log("Withdrawing the funds...");
 
-    await (await contract.withdrawFunds()).wait();
+    await (await contract.withdraw()).wait();
 
     console.log("Done!");
 }

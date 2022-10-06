@@ -8,7 +8,6 @@ import CollectionConfig from "../config/CollectionConfig";
 import ContractArguments from "../config/ContractArguments";
 import { NftContractType } from "../lib/NftContractProvider";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { getAddress } from "ethers/lib/utils";
 
 chai.use(ChaiAsPromised);
 
@@ -278,17 +277,19 @@ describe(CollectionConfig.contractName, function () {
   });
 
   it('Wallet of owner', async function () {
-    // check wallet of owner
-    expect(await owner.getAddress()).to.equal(await contract.ownerOf(1));
-    expect(await owner.getAddress()).to.equal(await contract.ownerOf(6)); // from refund
-    
-    // check wallet of whitelisted user
-    expect(await whitelistedUser.getAddress()).to.equal(await contract.ownerOf(2));
-    expect(await whitelistedUser.getAddress()).to.equal(await contract.ownerOf(3));
-
-    // check wallet of holders
-    expect(await holder.getAddress()).to.equal(await contract.ownerOf(4));
-    expect(await holder.getAddress()).to.equal(await contract.ownerOf(5));
+    expect(await contract.tokensOfOwner(await owner.getAddress())).deep.equal([
+      BigNumber.from(1),
+      BigNumber.from(6),
+    ]);
+    expect(await contract.tokensOfOwner(await whitelistedUser.getAddress())).deep.equal([
+      BigNumber.from(2),
+      BigNumber.from(3),
+    ]);
+    expect(await contract.tokensOfOwner(await holder.getAddress())).deep.equal([
+      BigNumber.from(4),
+      BigNumber.from(5),
+    ]);
+    expect(await contract.tokensOfOwner(await externalUser.getAddress())).deep.equal([]);
 
   });
     
@@ -318,19 +319,23 @@ describe(CollectionConfig.contractName, function () {
 
     // Mint last tokens with owner address and test walletOfOwner(...)
     await contract.connect(owner).publicMint(lastPublicMintAmount, {value: getPrice(SaleType.PUBLIC_SALE, lastPublicMintAmount)}); 
-    const expectedWalletOfOwner = [ 1, 6, ]; // add token 6 from refund
+    const expectedWalletOfOwner = [ BigNumber.from(1), BigNumber.from(6), ]; // add token 6 from refund
     
     for (const i of [...Array(lastPublicMintAmount).keys()].reverse()) {
-      expectedWalletOfOwner.push(
+      expectedWalletOfOwner.push(BigNumber.from(
           CollectionConfig.maxSupply - 
           (BigNumber.from(await contract.MAX_SUPPLY_PRE_SALE()).toNumber() + BigNumber.from(await contract.MAX_SUPPLY_GIFT()).toNumber()) - 
-          i + publicBeforeMintedAll);
+          i + publicBeforeMintedAll 
+        ));
     }
 
-    // check for the all the tokens minted from the owner
-    for (const i of [...Array(expectedWalletOfOwner.length).keys()].reverse()) {
-      expect(await contract.ownerOf(expectedWalletOfOwner[i])).to.equal(await owner.getAddress()), gassfee;
-    } 
+    expect(await contract.tokensOfOwner(
+      await owner.getAddress(),
+      {
+        // Set gas limit to the maximum value since this function should be used off-chain only and it would fail otherwise...
+        gasLimit: BigNumber.from('0xffffffffffffffff'),
+      },
+    )).deep.equal(expectedWalletOfOwner);
 
     // final checking supply
     const giftFinalMinted = BigNumber.from(await contract.giftMinted()).toNumber();
@@ -368,5 +373,32 @@ describe(CollectionConfig.contractName, function () {
     // Testing first and last minted tokens
     expect(await contract.tokenURI(1)).to.equal(`${uriPrefix}1${uriSuffix}`);
     expect(await contract.tokenURI(totalSupply)).to.equal(`${uriPrefix}${totalSupply}${uriSuffix}`);
+  });
+
+  it('Royalties', async function () {
+    const tokenOwner = await contract.tokensOfOwner(await owner.getAddress());
+    const tokenWhitelist = await contract.tokensOfOwner(await whitelistedUser.getAddress());
+    const tokenHolder = await contract.tokensOfOwner(await holder.getAddress());
+
+    // check royalties from token owner
+    for (const i of tokenOwner) {
+      let info = await contract.royaltyInfo(i, 100);
+        expect(info[0]).to.equal("0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18"); // artist address
+        expect(info[1]).to.equal(5); // percentage of royalties
+    }
+
+    // check royalties from token whitelist
+    for (const i of tokenWhitelist) {
+      let info = await contract.royaltyInfo(i, 100);
+        expect(info[0]).to.equal("0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18"); // artist address
+        expect(info[1]).to.equal(5); // percentage of royalties
+    }
+
+    // check royalties from token holder
+    for (const i of tokenHolder) {
+      let info = await contract.royaltyInfo(i, 100);
+        expect(info[0]).to.equal("0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18"); // artist address
+        expect(info[1]).to.equal(5); // percentage of royalties
+    }
   });
 });
