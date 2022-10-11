@@ -8,14 +8,14 @@ import CollectionConfig from "../config/CollectionConfig";
 import ContractArguments from "../config/ContractArguments";
 import { NftContractType } from "../lib/NftContractProvider";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { getAddress } from "ethers/lib/utils";
 
 chai.use(ChaiAsPromised);
 
 enum SaleType {
   WHITELIST = CollectionConfig.whitelistSale.price,
   PRE_SALE = CollectionConfig.preSale.price,
-  PUBLIC_SALE1 = CollectionConfig.publicSale1.price,
-  PUBLIC_SALE2 = CollectionConfig.publicSale2.price,
+  PUBLIC_SALE = CollectionConfig.publicSale.price,
 };
 
 const whitelistAddresses = [
@@ -44,6 +44,20 @@ function getPrice(saleType: SaleType, mintAmount: number) {
 
 const gassfee = {gasPrice: utils.parseUnits('100', 'gwei'), gasLimit: 1000000};
 
+// const mineSingleBlock = async () => {
+//   await ethers.provider.send("hardhat_mine", [
+//     ethers.utils.hexValue(1).toString(),
+//   ]);
+// };
+
+// async function simulateNextBlockTime(baseTime: number, changeBy: number) {
+//   const bi = BigNumber.from(baseTime);
+//   await ethers.provider.send("evm_setNextBlockTimestamp", [
+//     ethers.utils.hexlify(bi.add(changeBy)),
+//   ]);
+//   await mineSingleBlock();
+// }
+
 describe(CollectionConfig.contractName, function () {
   let owner!: SignerWithAddress;
   let whitelistedUser!: SignerWithAddress;
@@ -67,10 +81,16 @@ describe(CollectionConfig.contractName, function () {
     expect(await contract.symbol()).to.equal(CollectionConfig.tokenSymbol);
     expect(await contract.cost()).to.equal(getPrice(SaleType.WHITELIST, 1));
     expect(await contract.maxSupply()).to.equal(CollectionConfig.maxSupply);
-    expect(await contract.maxSupplyPreSale()).to.equal(CollectionConfig.maxSupplyPreSale);
-    expect(await contract.maxSupplyPublicSale()).to.equal(CollectionConfig.maxSupplyPublicSale);
+    expect(await contract.MAX_SUPPLY_GIFT()).to.equal(10);
+    expect(await contract.MAX_SUPPLY_PRE_SALE()).to.equal(40);
+    expect(await contract.MAX_SUPPLY_PUBLIC_SALE()).to.equal(50);
     expect(await contract.maxMintAmountPerTx()).to.equal(CollectionConfig.whitelistSale.maxMintAmountPerTx);
     expect(await contract.hiddenMetadataUri()).to.equal(CollectionConfig.hiddenMetadataUri);
+    expect(await contract.refundEndTime()).to.equal(false);
+
+    expect(await contract.giftMinted()).to.equal(BigNumber.from(0));
+    expect(await contract.preSaleMinted()).to.equal(BigNumber.from(0));
+    expect(await contract.publicSaleMinted()).to.equal(BigNumber.from(0));
 
     expect(await contract.paused()).to.equal(true);
     expect(await contract.whitelistMintEnable()).to.equal(false);
@@ -87,6 +107,7 @@ describe(CollectionConfig.contractName, function () {
     await expect(contract.connect(holder).preSaleMint(1, [], {value: getPrice(SaleType.WHITELIST, 1)})).to.be.revertedWith('Whitelist sale is not enabled!');
     await expect(contract.connect(owner).publicMint(1, {value: getPrice(SaleType.WHITELIST, 1)})).to.be.revertedWith('The contract is paused!');
     await expect(contract.connect(owner).preSaleMint(1, [], {value: getPrice(SaleType.WHITELIST, 1)})).to.be.revertedWith('Whitelist sale is not enabled!');
+    await expect(contract.connect(owner).withdraw()).to.be.revertedWith('Failed: no funds to withdraw');
 
     // the owner should always be able to run mintAddress
     await (await contract.giftMint(1, await owner.getAddress())).wait(), {gasPrice: utils.parseUnits('100', 'gwei'), gasLimit: 1000000};
@@ -146,21 +167,21 @@ describe(CollectionConfig.contractName, function () {
       1,
       merkleTree.getHexProof(keccak256(await whitelistedUser.getAddress())),
       {value: getPrice(SaleType.WHITELIST, 1)},
-    )).to.be.revertedWith("Invalid Proof");
+    )).to.be.revertedWith("Invalid proof");
 
     // Sending an invalid proof
     await expect(contract.connect(holder).preSaleMint(
       1,
       merkleTree.getHexProof(keccak256(await holder.getAddress())),
       {value: getPrice(SaleType.WHITELIST, 1)},
-    )).to.be.revertedWith("Invalid Proof");
+    )).to.be.revertedWith("Invalid proof");
 
     // Sending no proof at all
     await expect(contract.connect(holder).preSaleMint(
       1,
       [],
       {value: getPrice(SaleType.WHITELIST, 1)},
-    )).to.be.revertedWith("Invalid Proof");
+    )).to.be.revertedWith("Invalid proof");
 
     // Pause whitelis sale
     await contract.setWhitelistMintEnabled(false);
@@ -180,7 +201,10 @@ describe(CollectionConfig.contractName, function () {
     await contract.connect(whitelistedUser).publicMint(1, {value: getPrice(SaleType.PRE_SALE, 1)});
 
     // sending insufficuent funds
-    await expect(contract.connect(holder).publicMint(1, {value: getPrice(SaleType.PRE_SALE, 1).sub(1)})).to.be.rejectedWith(Error, "insufficient funds for intrinsic transaction cost");
+    await expect(contract.connect(holder).publicMint(
+      1, 
+      {value: getPrice(SaleType.PRE_SALE, 1).sub(1)}
+    )).to.be.rejectedWith(Error, "insufficient funds for intrinsic transaction cost");
 
     // Sending an invalid mint amount
     await expect(contract.connect(whitelistedUser).publicMint(
@@ -197,7 +221,7 @@ describe(CollectionConfig.contractName, function () {
 
     // puase pre-sale
     await contract.setPaused(true);
-    await contract.setCost(utils.parseEther(CollectionConfig.publicSale1.price.toString()));
+    await contract.setCost(utils.parseEther(CollectionConfig.publicSale.price.toString()));
   });
 
   it('Owner only functions', async function () {
@@ -207,78 +231,126 @@ describe(CollectionConfig.contractName, function () {
     await expect(contract.connect(externalUser).setMaxMintAmountPerTx(99999)).to.be.revertedWith('Ownable: caller is not the owner');
     await expect(contract.connect(externalUser).setHiddenMetadataUri('INVALID_URI')).to.be.revertedWith('Ownable: caller is not the owner');
     await expect(contract.connect(externalUser).setUriPrefix('INVALID_PREFIX')).to.be.revertedWith('Ownable: caller is not the owner');
-    await expect(contract.connect(externalUser).setUriSuffix('INVALID_SUFFIX')).to.be.revertedWith('Ownable: caller is not the owner');
+    //await expect(contract.connect(externalUser).setUriSuffix('INVALID_SUFFIX')).to.be.revertedWith('Ownable: caller is not the owner');
     await expect(contract.connect(externalUser).setPaused(false)).to.be.revertedWith('Ownable: caller is not the owner');
     await expect(contract.connect(externalUser).setMerkleRoot('0x0000000000000000000000000000000000000000000000000000000000000000')).to.be.revertedWith('Ownable: caller is not the owner');
     await expect(contract.connect(externalUser).setWhitelistMintEnabled(false)).to.be.revertedWith('Ownable: caller is not the owner');
-    await expect(contract.connect(externalUser).withdrawFunds()).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(contract.connect(externalUser).withdraw()).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(contract.connect(externalUser).setOpenForRefund(true)).to.be.revertedWith('Ownable: caller is not the owner');
+  });
+
+  it('Refund', async function ()  {
+    // refund is not open while public sale is open.
+    // make sure the public "paused" is false
+    await expect(contract.connect(owner).setOpenForRefund(true)).to.be.revertedWith('Only for whitelist sale!');
+
+    // refund is open only for whitelist minting
+    await contract.connect(owner).setWhitelistMintEnabled(true);
+    
+    // try to refund but the feature of refund still close
+    await expect(contract.connect(whitelistedUser).refund([BigNumber.from(6)])).to.be.revertedWith('Refund expired');
+
+    // open the refund feature
+    await contract.connect(owner).setOpenForRefund(true);
+
+    // try to refund but not own the token
+    await expect(contract.connect(owner).refund([BigNumber.from(6)])).to.be.revertedWith('Not token owner');
+
+    // success refund token 6
+    await contract.connect(whitelistedUser).refund([BigNumber.from(6)]);
+
+
+  });
+
+  it('Withdraw', async function () {
+    // witdraw when on whitelist periode or on refund periode
+    await expect(contract.connect(owner).withdraw()).to.be.revertedWith('Not in the right time');
+
+    await contract.connect(owner).setOpenForRefund(false);
+    await expect(contract.connect(owner).withdraw()).to.be.revertedWith('Not in the right time');
+
+    // success Withdraw (close the refund feature then the whitelist feature)
+    await contract.connect(owner).setWhitelistMintEnabled(false);
+    await contract.connect(owner).withdraw();
+
+
   });
 
   it('Wallet of owner', async function () {
-    expect(await contract.walletOfOwner(await owner.getAddress())).deep.equal([
+    expect(await contract.tokensOfOwner(await owner.getAddress())).deep.equal([
       BigNumber.from(1),
+      BigNumber.from(6), // get from refund
     ]);
     
-    expect(await contract.walletOfOwner(await whitelistedUser.getAddress())).deep.equal([
+    expect(await contract.tokensOfOwner(await whitelistedUser.getAddress())).deep.equal([
       BigNumber.from(2),
       BigNumber.from(3),
-      BigNumber.from(6),
     ]);
     
-    expect(await contract.walletOfOwner(await holder.getAddress())).deep.equal([
+    expect(await contract.tokensOfOwner(await holder.getAddress())).deep.equal([
       BigNumber.from(4),
       BigNumber.from(5),
     ]);
     
-    expect(await contract.walletOfOwner(await externalUser.getAddress())).deep.equal([]);
+    expect(await contract.tokensOfOwner(await externalUser.getAddress())).deep.equal([]);
   });
     
   it('Supply checks (long)', async function () {
-
-    const preSaleAlreadyMinted = BigNumber.from(await contract.preSaleMinted()).toNumber();
-    const publicSaleAlreadyMinted = BigNumber.from(await contract.publicSaleMinted()).toNumber();
-    const alreadyMinted = preSaleAlreadyMinted + publicSaleAlreadyMinted;
-    const maxMintAmountPerTx = 1000;
+    // if (process.env.EXTENDED_TESTS === undefined) {
+    //   this.skip();
+    // }
+    const publicBeforeMintedAll = BigNumber.from(await contract.publicSaleMinted()).toNumber();
+    const alreadyMinted = BigNumber.from(await contract.preSaleMinted()).toNumber() + BigNumber.from(await contract.giftMinted()).toNumber() + publicBeforeMintedAll;
+    const maxMintAmountPerTx = 100;
     const iterations = Math.floor((CollectionConfig.maxSupply - alreadyMinted) / maxMintAmountPerTx);
     const expectedTotalSupply = iterations * maxMintAmountPerTx + alreadyMinted;
-    const lastMintAmount = CollectionConfig.maxSupply - expectedTotalSupply;
-    const lastPublicMintAmount = CollectionConfig.maxSupplyPublicSale - publicSaleAlreadyMinted;
+    //const lastMintAmount = CollectionConfig.maxSupply - expectedTotalSupply;
+    const lastPublicMintAmount = BigNumber.from(await contract.MAX_SUPPLY_PUBLIC_SALE()).toNumber() - publicBeforeMintedAll;
     expect(await contract.totalSupply()).to.equal(alreadyMinted);
 
     await contract.setPaused(false);
     await contract.setMaxMintAmountPerTx(maxMintAmountPerTx);
 
-    await Promise.all([...Array(iterations).keys()].map(async () => await contract.connect(whitelistedUser).publicMint(maxMintAmountPerTx, {value: getPrice(SaleType.PUBLIC_SALE1, maxMintAmountPerTx)})));
+    await Promise.all([...Array(iterations).keys()].map(async () => await contract.connect(whitelistedUser).publicMint(maxMintAmountPerTx, {value: getPrice(SaleType.PUBLIC_SALE, maxMintAmountPerTx)})));
 
     // Try to mint over max supply (before sold-out)
-    await expect(contract.connect(holder).publicMint(lastMintAmount + 1, {value: getPrice(SaleType.PUBLIC_SALE1, lastMintAmount + 1)})).to.be.revertedWith('Max supply exceeded!');
-    await expect(contract.connect(holder).publicMint(lastMintAmount + 2, {value: getPrice(SaleType.PUBLIC_SALE1, lastMintAmount + 2)})).to.be.revertedWith('Max supply exceeded!');
+    await expect(contract.connect(holder).publicMint(lastPublicMintAmount + 1, {value: getPrice(SaleType.PUBLIC_SALE, lastPublicMintAmount + 1)})).to.be.revertedWith('Max public sale supply exceeded!');
+    await expect(contract.connect(holder).publicMint(lastPublicMintAmount + 2, {value: getPrice(SaleType.PUBLIC_SALE, lastPublicMintAmount + 2)})).to.be.revertedWith('Max public sale supply exceeded!');
 
     expect(await contract.totalSupply()).to.equal(expectedTotalSupply);
 
-    // Mint last public tokens with owner address and test walletOfOwner(...)
-    await contract.connect(owner).publicMint(lastPublicMintAmount, {value: getPrice(SaleType.PUBLIC_SALE1, lastPublicMintAmount)}), {gasLimit: BigNumber.from('0xffffffffffffffff')};
-    const expectedWalletOfOwner = [
-      BigNumber.from(1),
-    ];
+    // Mint last tokens with owner address and test walletOfOwner(...)
+    await contract.connect(owner).publicMint(lastPublicMintAmount, {value: getPrice(SaleType.PUBLIC_SALE, lastPublicMintAmount)}); 
+    const expectedWalletOfOwner = [ BigNumber.from(1), BigNumber.from(6), ]; // add token 6 from refund
+    
     for (const i of [...Array(lastPublicMintAmount).keys()].reverse()) {
-      expectedWalletOfOwner.push(BigNumber.from(CollectionConfig.maxSupplyPublicSale + i + 1));
+      expectedWalletOfOwner.push(BigNumber.from(
+          CollectionConfig.maxSupply - 
+          (BigNumber.from(await contract.MAX_SUPPLY_PRE_SALE()).toNumber() + BigNumber.from(await contract.MAX_SUPPLY_GIFT()).toNumber()) - 
+          i + publicBeforeMintedAll 
+        ));
     }
-    expect(await contract.walletOfOwner(
+    expect(await contract.tokensOfOwner(
       await owner.getAddress(),
       {
         // Set gas limit to the maximum value since this function should be used off-chain only and it would fail otherwise...
         gasLimit: BigNumber.from('0xffffffffffffffff'),
       },
-    )).deep.equal(expectedWalletOfOwner);
+    )).deep.equal(expectedWalletOfOwner);  // ===== error =====
+
+    // final checking supply
+    const giftFinalMinted = BigNumber.from(await contract.giftMinted()).toNumber();
+    const preSaleFinalMinted = BigNumber.from(await contract.preSaleMinted()).toNumber();
+    const publicFinalMinted = BigNumber.from(await contract.publicSaleMinted()).toNumber();
+    const totalFinalMinted = giftFinalMinted + preSaleFinalMinted + publicFinalMinted;
 
     // Try to mint over max supply (after sold-out)
-    await expect(contract.connect(whitelistedUser).publicMint(1, {value: getPrice(SaleType.PUBLIC_SALE1, 1)})).to.be.revertedWith('Max public supply exceeded!');
+    await expect(contract.connect(whitelistedUser).publicMint(1, {value: getPrice(SaleType.PUBLIC_SALE, 1)})).to.be.revertedWith('Max public sale supply exceeded!');
 
-    const totalMinted = BigNumber.from(await contract.preSaleMinted()).toNumber() + BigNumber.from(await contract.publicSaleMinted()).toNumber();
-    expect(await contract.totalSupply()).to.equal(totalMinted);
-    expect(await contract.preSaleMinted()).to.equal(totalMinted - BigNumber.from(await contract.publicSaleMinted()).toNumber());
-    expect(await contract.publicSaleMinted()).to.equal(totalMinted - BigNumber.from(await contract.preSaleMinted()).toNumber());
+    expect(await contract.totalSupply()).to.equal(totalFinalMinted);
+    expect(await contract.preSaleMinted()).to.equal(totalFinalMinted - publicFinalMinted- giftFinalMinted);
+    expect(await contract.publicSaleMinted()).to.equal(totalFinalMinted - preSaleFinalMinted - giftFinalMinted);
+    expect(await contract.giftMinted()).to.equal(totalFinalMinted - publicFinalMinted - preSaleFinalMinted);
 
     //if (process.env.EXTENDED_TESTS === undefined) {
     //  this.skip();

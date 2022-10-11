@@ -2,6 +2,5 @@
 /* tslint:disable */
 /* eslint-disable */
 export * as openzeppelin from "./@openzeppelin";
-export * as contractLibs from "./contract-libs";
 export * as contracts from "./contracts";
 export * as erc721A from "./erc721a";

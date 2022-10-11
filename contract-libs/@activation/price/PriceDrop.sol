@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./PublicSaleActive.sol";
+import "../PublicSaleActive.sol";
 
 contract PriceDrop is PublicSaleActive {
     uint256 public preSaleStartTime;
