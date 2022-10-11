@@ -17,6 +17,16 @@ export const hardhatLocal: NetworkConfigInterface = {
  * Ethereum 
  */
 export const ethereumTestnet: NetworkConfigInterface = {
+    chainId: 5,
+    symbol: "ETH (test)",
+    blockExplorer: {
+      name: "Etherscan (Goerli)",
+      generatorContractUrl: (contracAddress: string) => `https://goerli.etherscan.io/address/${contracAddress}`,
+      generateTransactionUrl: (transactionAddress: string) => `https://goerli.etherscan.io/tx/${transactionAddress}`,
+    },
+}
+
+export const ethereumLegacyTestnet: NetworkConfigInterface = {
     chainId: 4,
     symbol: "ETH (test)",
     blockExplorer: {

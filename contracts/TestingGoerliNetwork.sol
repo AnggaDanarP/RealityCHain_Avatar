@@ -42,7 +42,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 
-contract DemoGagalNft is ERC721AQueryable, ERC2981, Ownable, ReentrancyGuard {
+contract TestingGoerliNetwork is ERC721AQueryable, ERC2981, Ownable, ReentrancyGuard {
 
     using Strings for uint256;
 

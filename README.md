@@ -1,4 +1,12 @@
 This is a Smart contract NFT project
+## Features
+1. Refund
+2. split withdraw for artist royalties and company
+3. Royalties for artis (ERC2981)
+4. Template project for all EVM environtment (expecially ETH or Polygon)
+5. Ready for testing
+6. Already audit using Slither
+7. Ready for Goerli new testnet
 
 ## Getting Started
 
