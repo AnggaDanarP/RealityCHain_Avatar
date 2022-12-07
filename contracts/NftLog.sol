@@ -33,7 +33,7 @@ contract NftLog is
     uint256 public cost;
     uint256 public maxMintAmountPerTx;
 
-    uint256 public constant MAX_SUPPLY = 5555; // actual supply 5.555 + 88 NFTs
+    uint256 public constant MAX_SUPPLY = 5555;
 
     bool public refundEndToogle = false;
     mapping(uint256 => bool) private hashRefund;
@@ -242,8 +242,6 @@ contract NftLog is
      */
     /**
      * @dev setup the metadata token URI for opensea
-     * if tokenId < 88 will return metadata for creator
-     * else will return the character LOG for public
      * @param _tokenId is the token nft to set the metadata
      */
     function tokenURI(uint256 _tokenId)
@@ -254,8 +252,6 @@ contract NftLog is
         returns (string memory)
     {
         require(_exists(_tokenId), "URI query for nonexistent token");
-        // the actual value is 89
-        // the maximum supply for creator access is 88 NFTs
         if (revealed == false) {
             return hiddenMetadata;
         }
@@ -274,7 +270,7 @@ contract NftLog is
 
     /**
      * @dev set the general image (hidden metadata) before reveal the nft
-     * This is hidden metadata for creator access
+     * This is hidden metadata
      * @param _hiddenMetadataUri is a CID from ipfs that contain the general image
      */
     function setHiddenMetadata(string memory _hiddenMetadataUri)

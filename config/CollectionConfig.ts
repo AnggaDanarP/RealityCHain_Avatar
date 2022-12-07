@@ -9,8 +9,7 @@ const CollectionConfig: CollectionConfigInterface = {
     contractName: "NftLog",
     tokenName: "NftLog",
     tokenSymbol: "TGN",
-    hiddenMetadata: "ipfs://QmStzNEHgRCZn2VkyGonajL1DCu7KZSw1e6d4NLrpqZdks/LOG.json", //telur 2
-    // hiddenMetadata: "ipfs://QmYUfstapE6GSNvCuPjQcyXwfHyQtKznwRwNF9P43ckznL/CreatorAccess.json", //telur 1
+    hiddenMetadata: "ipfs://QmStzNEHgRCZn2VkyGonajL1DCu7KZSw1e6d4NLrpqZdks/LOG.json",
     whitelistSale: {
         price: 0.015,
         maxMintAmountPerTx: 1,
