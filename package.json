@@ -1,5 +1,5 @@
 {
-  "name": "hardhat-project",
+  "name": "league-of-guardians",
   "description": "This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.",
   "version": "1.0.0",
   "main": ".eslintrc.js",
@@ -20,11 +20,11 @@
     "verify": "hardhat verify --constructor-args config/ContractArguments.ts",
     "whitelist-open": "hardhat run scripts/2_whitelist_open.ts",
     "whitelist-close": "hardhat run scripts/3_whitelist_close.ts",
-    "presale-open": "hardhat run scripts/4_presale_open.ts",
-    "presale-close": "hardhat run scripts/5_presale_close.ts",
-    "public-sale-open": "hardhat run scripts/6_public_sale_open.ts",
-    "public-sale-close": "hardhat run scripts/7_public_sale_close.ts",
-    "reveal": "hardhat run scripts/8_reveal.ts",
+    "public-open": "hardhat run scripts/4_public_sale_open.ts",
+    "public-close": "hardhat run scripts/5_public_sale_close.ts",
+    "refund-open": "hardhat run scripts/6_refund_open.ts",
+    "refund-close": "hardhat run scripts/7_refund_close.ts",
+    "reveal": "hardhat run scripts/8_reveal_public.ts",
     "withdraw": "hardhat run scripts/9_withdraw.ts"
   },
   "keywords": [],
@@ -40,7 +40,8 @@
     "@types/node": "^18.6.4",
     "chai-as-promised": "^7.1.1",
     "dotenv": "^16.0.0",
-    "hardhat": "^2.9.3"
+    "hardhat": "^2.9.3",
+    "operator-filter-registry": "^1.3.1"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.5",

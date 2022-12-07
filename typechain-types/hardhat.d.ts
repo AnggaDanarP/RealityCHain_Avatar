@@ -33,9 +33,9 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC165__factory>;
     getContractFactory(
-      name: "TestingGoerliNetwork",
+      name: "NftLog",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.TestingGoerliNetwork__factory>;
+    ): Promise<Contracts.NftLog__factory>;
     getContractFactory(
       name: "ERC721A__IERC721Receiver",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -56,6 +56,18 @@ declare module "hardhat/types/runtime" {
       name: "IERC721A",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC721A__factory>;
+    getContractFactory(
+      name: "DefaultOperatorFilterer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.DefaultOperatorFilterer__factory>;
+    getContractFactory(
+      name: "IOperatorFilterRegistry",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IOperatorFilterRegistry__factory>;
+    getContractFactory(
+      name: "OperatorFilterer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OperatorFilterer__factory>;
 
     getContractAt(
       name: "Ownable",
@@ -83,10 +95,10 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IERC165>;
     getContractAt(
-      name: "TestingGoerliNetwork",
+      name: "NftLog",
       address: string,
       signer?: ethers.Signer
-    ): Promise<Contracts.TestingGoerliNetwork>;
+    ): Promise<Contracts.NftLog>;
     getContractAt(
       name: "ERC721A__IERC721Receiver",
       address: string,
@@ -112,6 +124,21 @@ declare module "hardhat/types/runtime" {
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.IERC721A>;
+    getContractAt(
+      name: "DefaultOperatorFilterer",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.DefaultOperatorFilterer>;
+    getContractAt(
+      name: "IOperatorFilterRegistry",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IOperatorFilterRegistry>;
+    getContractAt(
+      name: "OperatorFilterer",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.OperatorFilterer>;
 
     // default types
     getContractFactory(

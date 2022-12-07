@@ -6,24 +6,20 @@ import whitelistAddress from "./whitelist.json";
 const CollectionConfig: CollectionConfigInterface = {
     testnet: Networks.ethereumTestnet,
     mainnet: Networks.ethereumMainnet,
-    contractName: "TestingGoerliNetwork",
-    tokenName: "TestingGoerliNetwork",
+    contractName: "NftLog",
+    tokenName: "NftLog",
     tokenSymbol: "TGN",
-    hiddenMetadataUri: "ipfs://QmSsAWYz5VSswPqwveyPwyKKxnqFC5q85aLyhHqpazpFCp/hidden.json",
-    maxSupply: 100,
+    hiddenMetadata: "ipfs://QmStzNEHgRCZn2VkyGonajL1DCu7KZSw1e6d4NLrpqZdks/LOG.json", //telur 2
+    // hiddenMetadata: "ipfs://QmYUfstapE6GSNvCuPjQcyXwfHyQtKznwRwNF9P43ckznL/CreatorAccess.json", //telur 1
     whitelistSale: {
-        price: 0.01,
+        price: 0.015,
         maxMintAmountPerTx: 1,
     },
-    preSale: {
-        price: 0.05,
-        maxMintAmountPerTx: 2,
-    }, 
     publicSale: {
-        price: 0.08,
+        price: 0.03,
         maxMintAmountPerTx: 3,
     },
-    contractAddress: "0xca33D3b32dBCA203d022a719Dea64C2521141775",
+    contractAddress: "0x70C5a1ADd563bE21de17A787568cCb1Ab7297f95",
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
     whiteListAddresses: whitelistAddress, // on changes
