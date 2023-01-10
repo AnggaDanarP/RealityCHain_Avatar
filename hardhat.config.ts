@@ -64,6 +64,35 @@ task('generate-proof', 'Generates and prints out the whitelist proof for the giv
 })
 .addPositionalParam('address', 'The public address');
 
+task('generate-root-refund', 'Generates and prints out the root hash for the current refund', async () => {
+  // Check configuration
+  if (CollectionConfig.refundAddress.length < 1) {
+    throw 'The whitelist is empty, please add some addresses to the configuration.';
+  }
+
+  // Build the Merkle Tree
+  const leafNodes = CollectionConfig.refundAddress.map(addr => keccak256(addr));
+  const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
+  const rootHash = '0x' + merkleTree.getRoot().toString('hex');
+
+  console.log('The Merkle Tree root hash for the current whitelist is: ' + rootHash);
+});
+
+task('generate-proof-refund', 'Generates and prints out the refund proof for the given address (compatible with block explorers such as Etherscan)', async (taskArgs: {address: string}) => {
+  // Check configuration
+  if (CollectionConfig.refundAddress.length < 1) {
+    throw 'The whitelist is empty, please add some addresses to the configuration.';
+  }
+
+  // Build the Merkle Tree
+  const leafNodes = CollectionConfig.refundAddress.map(addr => keccak256(addr));
+  const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
+  const proof = merkleTree.getHexProof(keccak256(taskArgs.address)).toString().replace(/'/g, '').replace(/ /g, '');
+
+  console.log('The whitelist proof for the given address is: ' + proof);
+})
+.addPositionalParam('address', 'The public address');
+
 task('rename-contract', 'Renames the smart contract replacing all occurrences in source files', async (taskArgs: {newName: string}, hre) => {
   // Validate new name
   if (!/^([A-Z][A-Za-z0-9]+)$/.test(taskArgs.newName)) {
@@ -124,9 +153,9 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       // Ethereum
+      goerli: process.env.BLOCK_EXPLORER_API_KEY!,
       rinkeby: process.env.BLOCK_EXPLORER_API_KEY!,
       mainnet: process.env.BLOCK_EXPLORER_API_KEY!,
-      goerli: process.env.BLOCK_EXPLORER_API_KEY!,
       // Polygon
       polygon: process.env.BLOCK_EXPLORER_API_KEY!,
       polygonMumbai: process.env.BLOCK_EXPLORER_API_KEY!,

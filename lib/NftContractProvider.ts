@@ -1,4 +1,4 @@
-import { NftLog as ContractType } from '../typechain-types/index';
+import { TestingLOG as ContractType } from '../typechain-types/index';
 
 import { ethers } from "hardhat";
 import CollectionConfig from "./../config/CollectionConfig";

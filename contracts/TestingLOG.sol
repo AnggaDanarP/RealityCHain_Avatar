@@ -8,16 +8,14 @@ SPDX-License-Identifier: MIT
 */
 pragma solidity 0.8.17;
 
-import "erc721a/contracts/extensions/ERC721AQueryable.sol";
+import "./token/ERC721r.sol";
 import "operator-filter-registry/src/DefaultOperatorFilterer.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 
-contract NftLog is
-    ERC721AQueryable,
+contract TestingLOG is
+    ERC721r,
     ReentrancyGuard,
     Ownable,
     DefaultOperatorFilterer
@@ -27,14 +25,17 @@ contract NftLog is
     string public uriPrefix = "";
     string public hiddenMetadata;
 
-    bytes32 public merkleRoot;
+    bytes32 public merkleRootWhitelist;
     mapping(address => bool) public whitelistClaimed;
+    mapping(address => uint256) public publicClaimNft;
 
     uint256 public cost;
     uint256 public maxMintAmountPerTx;
 
     uint256 public constant MAX_SUPPLY = 5555;
+    uint256 public constant PUBLIC_LIMIT = 6;
 
+    bytes32 public merkleRootRefund;
     bool public refundEndToogle = false;
     mapping(uint256 => bool) private hashRefund;
 
@@ -42,18 +43,13 @@ contract NftLog is
     bool public revealed = false;
     bool public whitelistMintEnable = false;
 
-    address private constant WALLET_A =
-        0x69a31266321e78670F1Ea24CA57c772259C679ad;
-    address private constant WALLET_B =
-        0xB940062cf4afb9068623F23d974E02268015186a;
-
     constructor(
         string memory _tokenName,
         string memory _tokenSymbol,
         uint256 _cost,
         uint256 _maxMintAmountPerTx,
         string memory _hiddenMetadata
-    ) ERC721A(_tokenName, _tokenSymbol) {
+    ) ERC721r(_tokenName, _tokenSymbol, MAX_SUPPLY) {
         setCost(_cost);
         setMaxMintAmountPerTx(_maxMintAmountPerTx);
         setHiddenMetadata(_hiddenMetadata);
@@ -67,9 +63,11 @@ contract NftLog is
 
     /**
      * @dev modifier to check supply availability
+     * check max amount nft in one tx
+     * check the availability of tokens from "MAX_SUPPLY"
      * @param _mintAmount is total minting
      */
-    modifier mintCompliance(uint256 _mintAmount) {
+    modifier mintAmountCompliance(uint256 _mintAmount) {
         require(
             _mintAmount > 0 && _mintAmount <= maxMintAmountPerTx,
             "Invalid mint amount!"
@@ -111,10 +109,17 @@ contract NftLog is
     }
 
     /**
-     * @dev set the merkleroot for verify
+     * @dev set the merkleroot whitelist for verify
      */
-    function setMerkleRoot(bytes32 _merkleRoot) external onlyOwner {
-        merkleRoot = _merkleRoot;
+    function setMerkleRootWhitelist(bytes32 _merkleRoot) external onlyOwner {
+        merkleRootWhitelist = _merkleRoot;
+    }
+
+    /**
+     * @dev set the merkleroot Refund for verify
+     */
+    function setMerkleRootRefund(bytes32 _merkleRoot) external onlyOwner {
+        merkleRootRefund = _merkleRoot;
     }
 
     /**
@@ -131,36 +136,42 @@ contract NftLog is
         public
         payable
         nonReentrant
-        mintCompliance(1)
+        mintAmountCompliance(1)
         mintPriceCompliance(1)
     {
         require(whitelistMintEnable, "Whitelist sale is not enabled!");
-
         require(
-            _isOnList(msg.sender, _merkleProof, merkleRoot),
+            _isOnList(msg.sender, _merkleProof, merkleRootWhitelist),
             "Invalid proof"
         );
         require(!whitelistClaimed[_msgSender()], "Address already claimed");
 
         whitelistClaimed[_msgSender()] = true;
 
-        _safeMint(_msgSender(), 1);
+        _mintRandom(_msgSender(), 1);
     }
 
     /**
      * @dev minting for public
+     * amount NFT can provide is only 3 in one tx
+     * in one address only have 6 nft for the limit
      * @param _mintAmount is mount of nft will mint
      */
     function publicMint(uint256 _mintAmount)
         public
         payable
         nonReentrant
-        mintCompliance(_mintAmount)
+        mintAmountCompliance(_mintAmount)
         mintPriceCompliance(_mintAmount)
     {
         require(!paused, "The contract is paused!");
+        require(
+            publicClaimNft[_msgSender()] + _mintAmount <= PUBLIC_LIMIT,
+            "NFT Limit Exceeded"
+        );
 
-        _safeMint(_msgSender(), _mintAmount);
+        publicClaimNft[_msgSender()] += _mintAmount;
+        _mintRandom(_msgSender(), _mintAmount);
     }
 
     /**
@@ -172,10 +183,10 @@ contract NftLog is
         external
         nonReentrant
         onlyOwner
-        mintCompliance(_receiver.length)
+        mintAmountCompliance(_receiver.length)
     {
         for (uint256 i = 0; i < _receiver.length; i++) {
-            _safeMint(_receiver[i], 1);
+            _mintRandom(_receiver[i], 1);
         }
     }
 
@@ -197,8 +208,15 @@ contract NftLog is
      * @dev refund open when the the feature is on
      * @param tokenIds is a token that represent from nft that want to refund
      */
-    function refund(uint256[] calldata tokenIds) public nonReentrant {
+    function refund(
+        uint256[] calldata tokenIds,
+        bytes32[] calldata _merkleProof
+    ) public nonReentrant {
         require(refundEndToogle, "Refund expired");
+        require(
+            _isOnList(msg.sender, _merkleProof, merkleRootRefund),
+            "Invalid proof"
+        );
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
             uint256 tokenId = tokenIds[i];
@@ -223,16 +241,16 @@ contract NftLog is
      * @dev cen do withdraw if refund feature and minitng whitelist section is off
      */
     function withdraw() external onlyOwner nonReentrant {
+        uint256 balance = address(this).balance;
         require(
             !refundEndToogle && !whitelistMintEnable,
             "Not in the right time"
         );
-        require(address(this).balance > 0, "Failed: no funds to withdraw");
-        uint256 walletBalanceA = (address(this).balance * 15) / 100;
-        uint256 walletBalanceB = (address(this).balance * 85) / 100;
-
-        Address.sendValue(payable(WALLET_A), walletBalanceA);
-        Address.sendValue(payable(WALLET_B), walletBalanceB);
+        require(balance > 0, "Failed: no funds to withdraw");
+        Address.sendValue(
+            payable(0x21d1E1577689550148722737aEB0aE6935941aaa),
+            balance
+        );
     }
 
     /**
@@ -248,14 +266,13 @@ contract NftLog is
         public
         view
         virtual
-        override(ERC721A, IERC721A)
+        override
         returns (string memory)
     {
         require(_exists(_tokenId), "URI query for nonexistent token");
-        if (revealed == false) {
-            return hiddenMetadata;
-        }
-        string memory currentBaseURI = _baseURI();
+        string memory currentBaseURI = (revealed == false)
+            ? hiddenMetadata
+            : _baseURI();
         return
             bytes(currentBaseURI).length > 0
                 ? string(
@@ -305,9 +322,9 @@ contract NftLog is
         revealed = _state;
     }
 
-    function _startTokenId() internal view virtual override returns (uint256) {
-        return 1;
-    }
+    // function _startTokenId() internal view virtual override returns (uint256) {
+    //     return 1;
+    // }
 
     /**
      * @dev set hte maximum mount nft for minting
@@ -356,7 +373,7 @@ contract NftLog is
      */
     function setApprovalForAll(address operator, bool approved)
         public
-        override(ERC721A, IERC721A)
+        override
         onlyAllowedOperatorApproval(operator)
     {
         super.setApprovalForAll(operator, approved);
@@ -364,8 +381,8 @@ contract NftLog is
 
     function approve(address operator, uint256 tokenId)
         public
-        payable
-        override(ERC721A, IERC721A)
+        override
+        //payable
         onlyAllowedOperatorApproval(operator)
     {
         super.approve(operator, tokenId);
@@ -375,7 +392,7 @@ contract NftLog is
         address from,
         address to,
         uint256 tokenId
-    ) public payable override(ERC721A, IERC721A) onlyAllowedOperator(from) {
+    ) public override onlyAllowedOperator(from) {
         super.transferFrom(from, to, tokenId);
     }
 
@@ -383,7 +400,7 @@ contract NftLog is
         address from,
         address to,
         uint256 tokenId
-    ) public payable override(ERC721A, IERC721A) onlyAllowedOperator(from) {
+    ) public override onlyAllowedOperator(from) {
         super.safeTransferFrom(from, to, tokenId);
     }
 
@@ -392,7 +409,7 @@ contract NftLog is
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public payable override(ERC721A, IERC721A) onlyAllowedOperator(from) {
+    ) public override onlyAllowedOperator(from) {
         super.safeTransferFrom(from, to, tokenId, data);
     }
 }

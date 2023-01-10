@@ -34,10 +34,10 @@ async function main() {
     }
 
     //update root hash (if changed)
-    if ((await contract.merkleRoot()) !== rootHash) {
+    if ((await contract.merkleRootWhitelist()) !== rootHash) {
         console.log(`Updating the root hash to ${rootHash}...`);
 
-        await (await contract.setMerkleRoot(rootHash)).wait();
+        await (await contract.setMerkleRootWhitelist(rootHash)).wait();
     }
 
     // Enable whitelist sale (if needed)

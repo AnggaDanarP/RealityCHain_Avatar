@@ -2,26 +2,28 @@ import CollectionConfigInterface from "../lib/CollectionConfigInterface";
 import * as Networks from "../lib/Networks";
 import * as Marketpalce from "../lib/Marketplaces";
 import whitelistAddress from "./whitelist.json";
+import refunder from "./refund.json";
 
 const CollectionConfig: CollectionConfigInterface = {
     testnet: Networks.ethereumTestnet,
     mainnet: Networks.ethereumMainnet,
-    contractName: "NftLog",
-    tokenName: "NftLog",
-    tokenSymbol: "TGN",
-    hiddenMetadata: "ipfs://QmStzNEHgRCZn2VkyGonajL1DCu7KZSw1e6d4NLrpqZdks/LOG.json",
+    contractName: "TestingLOG",
+    tokenName: "Testing-LOG",
+    tokenSymbol: "TLOG",
+    hiddenMetadata: "ipfs://QmdsoAhzoLeiTfsd518WGgVBYV6Ld9BfrrRnTh4orLjHfG/",
     whitelistSale: {
         price: 0.015,
         maxMintAmountPerTx: 1,
     },
     publicSale: {
-        price: 0.03,
+        price: 0.02,
         maxMintAmountPerTx: 3,
     },
-    contractAddress: "0x70C5a1ADd563bE21de17A787568cCb1Ab7297f95",
+    contractAddress: "0xdE20280ad59c70dC4a181757f5e13E835F7E567C",
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
     whiteListAddresses: whitelistAddress, // on changes
+    refundAddress: refunder
 };
 
 export default CollectionConfig;

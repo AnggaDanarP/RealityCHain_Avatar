@@ -16,6 +16,8 @@
     "local-node": "hardhat node",
     "root-hash": "hardhat generate-root-hash",
     "proof": "hardhat generate-proof",
+    "root-refund": "hardhat generate-root-refund",
+    "proof-refund": "hardhat generate-proof-refund",
     "deploy": "hardhat run scripts/1_deploy.ts",
     "verify": "hardhat verify --constructor-args config/ContractArguments.ts",
     "whitelist-open": "hardhat run scripts/2_whitelist_open.ts",

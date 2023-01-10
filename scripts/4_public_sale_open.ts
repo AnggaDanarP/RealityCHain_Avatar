@@ -6,12 +6,6 @@ async function main() {
     // attach to deployed contract
     const contract = await NftContractProvider.getContract();
 
-    // Close the reveral
-    if (await contract.revealed()) {
-        await (await contract.setRevealed(false)).wait();
-        await (await (await contract.setHiddenMetadataUri("ipfs://QmSsAWYz5VSswPqwveyPwyKKxnqFC5q85aLyhHqpazpFCp/hidden.json")).wait());
-    }
-
     // update sale price (if needed)
     const publicSalePrice = utils.parseEther(CollectionConfig.publicSale.price.toString());
     if (!(await contract.cost()).eq(publicSalePrice)) {
