@@ -27,7 +27,7 @@ contract TestingLOG is
 
     bytes32 public merkleRootWhitelist;
     mapping(address => bool) public whitelistClaimed;
-    mapping(address => uint256) public publicClaimNft;
+    mapping(address => uint256) public walletClaimNft;
 
     uint256 public cost;
     uint256 public maxMintAmountPerTx;
@@ -89,6 +89,26 @@ contract TestingLOG is
     }
 
     /**
+     * @dev mofidier check address is not a contract
+     */
+    modifier noContract() {
+        require(!Address.isContract(_msgSender()), "Contracts cannot mint");
+        _;
+    }
+
+    /**
+     * @dev mofidier to check the address is still have supply for minting
+     * @param _mintAmount is total minting
+     */
+    modifier nftSupplyCompliance(uint256 _mintAmount) {
+        require(
+            walletClaimNft[_msgSender()] + _mintAmount <= PUBLIC_LIMIT,
+            "NFT Limit Exceeded"
+        );
+        _;
+    }
+
+    /**
      * ===================================================
      *                Verification whitelist
      * ===================================================
@@ -109,24 +129,20 @@ contract TestingLOG is
     }
 
     /**
-     * @dev set the merkleroot whitelist for verify
-     */
-    function setMerkleRootWhitelist(bytes32 _merkleRoot) external onlyOwner {
-        merkleRootWhitelist = _merkleRoot;
-    }
-
-    /**
-     * @dev set the merkleroot Refund for verify
-     */
-    function setMerkleRootRefund(bytes32 _merkleRoot) external onlyOwner {
-        merkleRootRefund = _merkleRoot;
-    }
-
-    /**
      * ===================================================
      *                       Minting
      * ===================================================
      */
+    /**
+     * @dev minting private function
+     * @dev setup up for every address only have 6 NFTs
+     * @param _mintAmount that amount of NFT want to mint
+     */
+    function _minting(uint256 _mintAmount) private {
+        walletClaimNft[_msgSender()] += _mintAmount;
+        _mintRandom(_msgSender(), _mintAmount);
+    }
+
     /**
      * @dev whitelist mint
      * @dev every address whitelist only get 1 NFT
@@ -136,8 +152,10 @@ contract TestingLOG is
         public
         payable
         nonReentrant
+        noContract
         mintAmountCompliance(1)
         mintPriceCompliance(1)
+        nftSupplyCompliance(1)
     {
         require(whitelistMintEnable, "Whitelist sale is not enabled!");
         require(
@@ -147,8 +165,7 @@ contract TestingLOG is
         require(!whitelistClaimed[_msgSender()], "Address already claimed");
 
         whitelistClaimed[_msgSender()] = true;
-
-        _mintRandom(_msgSender(), 1);
+        _minting(1);
     }
 
     /**
@@ -161,17 +178,13 @@ contract TestingLOG is
         public
         payable
         nonReentrant
+        noContract
         mintAmountCompliance(_mintAmount)
         mintPriceCompliance(_mintAmount)
+        nftSupplyCompliance(_mintAmount)
     {
         require(!paused, "The contract is paused!");
-        require(
-            publicClaimNft[_msgSender()] + _mintAmount <= PUBLIC_LIMIT,
-            "NFT Limit Exceeded"
-        );
-
-        publicClaimNft[_msgSender()] += _mintAmount;
-        _mintRandom(_msgSender(), _mintAmount);
+        _minting(1);
     }
 
     /**
@@ -195,14 +208,6 @@ contract TestingLOG is
      *                       Refund
      * ===================================================
      */
-    /**
-     * @dev toogle to open refund feature
-     * @param _refundEndToogle is a toogle to set on/off the feature
-     */
-    function setToogleForRefund(bool _refundEndToogle) external onlyOwner {
-        refundEndToogle = _refundEndToogle;
-    }
-
     /**
      * @dev refund feature
      * @dev refund open when the the feature is on
@@ -285,6 +290,15 @@ contract TestingLOG is
                 : "";
     }
 
+    function _baseURI() internal view virtual override returns (string memory) {
+        return uriPrefix;
+    }
+
+    /**
+     * ===================================================
+     *                    Set Function
+     * ===================================================
+     */
     /**
      * @dev set the general image (hidden metadata) before reveal the nft
      * This is hidden metadata
@@ -305,15 +319,6 @@ contract TestingLOG is
         uriPrefix = _uriPrefix;
     }
 
-    function _baseURI() internal view virtual override returns (string memory) {
-        return uriPrefix;
-    }
-
-    /**
-     * ===================================================
-     *                     Reveal
-     * ===================================================
-     */
     /**
      * @dev set hte reveal toogle
      * @param _state is a state to set the reveal feature
@@ -321,10 +326,6 @@ contract TestingLOG is
     function setRevealed(bool _state) public onlyOwner {
         revealed = _state;
     }
-
-    // function _startTokenId() internal view virtual override returns (uint256) {
-    //     return 1;
-    // }
 
     /**
      * @dev set hte maximum mount nft for minting
@@ -346,6 +347,20 @@ contract TestingLOG is
     }
 
     /**
+     * @dev set the merkleroot whitelist for verify
+     */
+    function setMerkleRootWhitelist(bytes32 _merkleRoot) external onlyOwner {
+        merkleRootWhitelist = _merkleRoot;
+    }
+
+    /**
+     * @dev set the merkleroot Refund for verify
+     */
+    function setMerkleRootRefund(bytes32 _merkleRoot) external onlyOwner {
+        merkleRootRefund = _merkleRoot;
+    }
+
+    /**
      * ===================================================
      *                    Pause/Unpause
      * ===================================================
@@ -364,6 +379,14 @@ contract TestingLOG is
      */
     function setWhitelistMintEnabled(bool _state) public onlyOwner {
         whitelistMintEnable = _state;
+    }
+
+    /**
+     * @dev toogle to open refund feature
+     * @param _refundEndToogle is a toogle to set on/off the feature
+     */
+    function setToogleForRefund(bool _refundEndToogle) external onlyOwner {
+        refundEndToogle = _refundEndToogle;
     }
 
     /**

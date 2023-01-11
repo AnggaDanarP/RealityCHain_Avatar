@@ -19,7 +19,7 @@ const CollectionConfig: CollectionConfigInterface = {
         price: 0.02,
         maxMintAmountPerTx: 3,
     },
-    contractAddress: "0xdE20280ad59c70dC4a181757f5e13E835F7E567C",
+    contractAddress: "0xd2137C4eD07d2675B7990D04cFaE58e3e2069ddA",
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
     whiteListAddresses: whitelistAddress, // on changes
