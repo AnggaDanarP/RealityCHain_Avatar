@@ -34,14 +34,18 @@ contract TestingLOG is
 
     uint256 public constant MAX_SUPPLY = 5555;
     uint256 public constant PUBLIC_LIMIT = 6;
+    uint256 public maxSupplyWhitelist = 1000;
 
     bytes32 public merkleRootRefund;
-    bool public refundEndToogle = false;
     mapping(uint256 => bool) private hashRefund;
 
     bool public paused = true;
     bool public revealed = false;
+    bool public refundEndToogle = false;
     bool public whitelistMintEnable = false;
+
+    uint256 public publicMinted = 0;
+    uint256 public whitelistMinted = 0;
 
     constructor(
         string memory _tokenName,
@@ -159,11 +163,14 @@ contract TestingLOG is
     {
         require(whitelistMintEnable, "Whitelist sale is not enabled!");
         require(
+            whitelistMinted + 1 <= maxSupplyWhitelist,
+            "Supply whitelist exceeded"
+        );
+        require(
             _isOnList(msg.sender, _merkleProof, merkleRootWhitelist),
             "Invalid proof"
         );
         require(!whitelistClaimed[_msgSender()], "Address already claimed");
-
         whitelistClaimed[_msgSender()] = true;
         _minting(1);
     }
@@ -184,6 +191,10 @@ contract TestingLOG is
         nftSupplyCompliance(_mintAmount)
     {
         require(!paused, "The contract is paused!");
+        require(
+            publicMinted + _mintAmount <= MAX_SUPPLY - maxSupplyWhitelist,
+            "Supply public exceeded"
+        );
         _minting(1);
     }
 
@@ -358,6 +369,15 @@ contract TestingLOG is
      */
     function setMerkleRootRefund(bytes32 _merkleRoot) external onlyOwner {
         merkleRootRefund = _merkleRoot;
+    }
+
+    function setMaxWhitelistSupply(uint256 _supply) external onlyOwner {
+        require(_supply > whitelistMinted, "Wrong input");
+        require(
+            _supply <= MAX_SUPPLY - totalSupply(),
+            "Input to much from supply"
+        );
+        maxSupplyWhitelist = _supply;
     }
 
     /**
