@@ -31,6 +31,8 @@ error WrongInputSupply();
 error SupplyInputAboveLimit();
 error NonExistToken();
 error MintingMoreTokenThanAvailable();
+error NotTokenOwner();
+error TokenAlreadyRefunded();
 
 contract TestingLOG is
     ERC721Enumerable,
@@ -78,7 +80,8 @@ contract TestingLOG is
     mapping(uint256 => uint256) private _availableTokens;
     mapping(uint256 => uint256) private tokenCostById;
 
-    event MintingRandom(address to, uint256 tokenId);
+    event Minting(address to, uint256 tokenId);
+    event Refund(address from, uint256 tokenId, uint256 costToken);
 
     constructor(uint256 _maxSupplyAvailable, string memory _hiddenMetadata)
         ERC721("Testing-LOG", "TLOG")
@@ -226,6 +229,8 @@ contract TestingLOG is
 
             --updatedNumAvailableTokens;
             tokenCostById[tokenId] = feature[mintingFeature].cost;
+
+            emit Minting(_to, tokenId);
         }
 
         _numAvailableTokens = updatedNumAvailableTokens;
@@ -288,12 +293,13 @@ contract TestingLOG is
     }
 
     function refund(
-        uint256[] calldata tokenIds,
+        uint256 tokenId,
         bytes32[] calldata _merkleProof
     ) public nonReentrant {
         if (!refundToggle) {
             revert RefundDisable();
         }
+
         if (
             !_isOnList(
                 msg.sender,
@@ -303,20 +309,17 @@ contract TestingLOG is
         ) {
             revert InvalidProof();
         }
-        uint256 price;
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            uint256 tokenId = tokenIds[i];
-            require(_exists(tokenId), "Token is not exist");
-            require(msg.sender == ownerOf(tokenId), "Not token owner");
-            require(!hashRefund[tokenId], "Already refunded");
-            hashRefund[tokenId] = true;
-            transferFrom(msg.sender, owner(), tokenId);
-            price += tokenCostById[tokenId];
-        }
+        if (!_exists(tokenId)) revert NonExistToken();
+        if (_msgSender() != ownerOf(tokenId)) revert NotTokenOwner();
+        if (hashRefund[tokenId]) revert TokenAlreadyRefunded();
 
-        // need update and make sure it is correct
-        uint256 refundAmount = tokenIds.length * price;
-        Address.sendValue(payable(msg.sender), refundAmount);
+        uint256 priceToReturn = tokenCostById[tokenId];
+        hashRefund[tokenId] = true;
+        transferFrom(msg.sender, owner(), tokenId);
+
+        Address.sendValue(payable(_msgSender()), priceToReturn);
+
+        emit Refund(_msgSender(), tokenId, priceToReturn);
     }
 
     function withdraw() external onlyOwner nonReentrant {
