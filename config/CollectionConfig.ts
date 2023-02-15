@@ -8,18 +8,9 @@ const CollectionConfig: CollectionConfigInterface = {
     testnet: Networks.ethereumTestnet,
     mainnet: Networks.ethereumMainnet,
     contractName: "TestingLOG",
-    tokenName: "Testing-LOG",
-    tokenSymbol: "TLOG",
+    maxSupply: 5555,
     hiddenMetadata: "ipfs://QmdsoAhzoLeiTfsd518WGgVBYV6Ld9BfrrRnTh4orLjHfG/",
-    whitelistSale: {
-        price: 0.015,
-        maxMintAmountPerTx: 1,
-    },
-    publicSale: {
-        price: 0.02,
-        maxMintAmountPerTx: 3,
-    },
-    contractAddress: "0xFaa48CC413B58Ac0360cC4320dfB3936AEFCc606",
+    contractAddress: "0x02196b33c5CFD6Ac54CC7d3E6ECb5d86ac9681Ce",
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
     whiteListAddresses: whitelistAddress, // on changes

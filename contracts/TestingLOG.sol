@@ -8,14 +8,32 @@ SPDX-License-Identifier: MIT
 */
 pragma solidity 0.8.17;
 
-import "./token/ERC721r.sol";
+//import "./token/ERC721r.sol";
 import "operator-filter-registry/src/DefaultOperatorFilterer.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+error InvalidMintAmount();
+error AmountCannotZero();
+error MaxSupplyExceeded();
+error InsufficientFunds();
+error ContractAddressCannotMint();
+error AddressWhitelistAlreadyClaimed();
+error PublicDisable();
+error WhitelistSaleDisable();
+error RefundDisable();
+error InvalidProof();
+error NftLimitAddressExceeded();
+error NeedAllFeaturesOff();
+error WrongInputSupply();
+error SupplyInputAboveLimit();
+error NonExistToken();
+error MintingMoreTokenThanAvailable();
+
 contract TestingLOG is
-    ERC721r,
+    ERC721Enumerable,
     ReentrancyGuard,
     Ownable,
     DefaultOperatorFilterer
@@ -24,105 +42,57 @@ contract TestingLOG is
 
     string public uriPrefix = "";
     string public hiddenMetadata;
-
-    bytes32 public merkleRootWhitelist;
-    mapping(address => bool) public whitelistClaimed;
-    mapping(address => uint256) public walletClaimNft;
-
-    uint256 public cost;
-    uint256 public maxMintAmountPerTx;
-
-    uint256 public constant MAX_SUPPLY = 5555;
-    uint256 public constant PUBLIC_LIMIT = 6;
-    uint256 public maxSupplyWhitelist = 1000;
-
-    bytes32 public merkleRootRefund;
-    mapping(uint256 => bool) private hashRefund;
-
-    bool public paused = true;
+    uint256 private _numAvailableTokens;
+    uint256 public immutable maxSupplyToken;
+    uint256 public constant BATCH_SIZE = 6;
     bool public revealed = false;
-    bool public refundEndToogle = false;
-    bool public whitelistMintEnable = false;
+    bool private refundToggle = false;
 
-    uint256 public publicMinted = 0;
-    uint256 public whitelistMinted = 0;
+    struct NftSpec {
+        uint256 supplyLimit;
+        uint256 cost;
+        uint256 maxMintAmountPerTx;
+        uint256 alreadyMinted;
+        bool toggle;
+    }
+    struct Verification {
+        bytes32 merkleRoot;
+    }
 
-    constructor(
-        string memory _tokenName,
-        string memory _tokenSymbol,
-        uint256 _cost,
-        uint256 _maxMintAmountPerTx,
-        string memory _hiddenMetadata
-    ) ERC721r(_tokenName, _tokenSymbol, MAX_SUPPLY) {
-        setCost(_cost);
-        setMaxMintAmountPerTx(_maxMintAmountPerTx);
+    enum MintingFeature {
+        publicMinting,
+        whitelistMinting,
+        giftMinting
+    }
+
+    enum VerifyFeature {
+        whitelist,
+        refund
+    }
+
+    mapping(MintingFeature => NftSpec) public feature;
+    mapping(VerifyFeature => Verification) public verify;
+    mapping(address => bool) private _whitelistClaimed;
+    mapping(address => uint256) private walletClaimNft;
+    mapping(uint256 => bool) private hashRefund;
+    mapping(uint256 => uint256) private _availableTokens;
+    mapping(uint256 => uint256) private tokenCostById;
+
+    event MintingRandom(address to, uint256 tokenId);
+
+    constructor(uint256 _maxSupplyAvailable, string memory _hiddenMetadata)
+        ERC721("Testing-LOG", "TLOG")
+    {
         setHiddenMetadata(_hiddenMetadata);
+        maxSupplyToken = _maxSupplyAvailable;
+        _numAvailableTokens = _maxSupplyAvailable;
+        feature[MintingFeature.publicMinting] = NftSpec(2000, 0.02 ether, 3, 0, false );
+        feature[MintingFeature.whitelistMinting] = NftSpec(1000, 0.015 ether, 1, 0, false );
+        feature[MintingFeature.giftMinting] = NftSpec(200, 0, 200, 0, true);
+        verify[VerifyFeature.whitelist] = Verification(0);
+        verify[VerifyFeature.refund] = Verification(0);
     }
 
-    /**
-     * ===================================================
-     *                      Modifier
-     * ===================================================
-     */
-
-    /**
-     * @dev modifier to check supply availability
-     * check max amount nft in one tx
-     * check the availability of tokens from "MAX_SUPPLY"
-     * @param _mintAmount is total minting
-     */
-    modifier mintAmountCompliance(uint256 _mintAmount) {
-        require(
-            _mintAmount > 0 && _mintAmount <= maxMintAmountPerTx,
-            "Invalid mint amount!"
-        );
-        require(
-            totalSupply() + _mintAmount <= MAX_SUPPLY,
-            "Max supply exceeded!"
-        );
-        _;
-    }
-
-    /**
-     * @dev mofidier to check funds to meet nft prices
-     * @param _mintAmount is total minting
-     */
-    modifier mintPriceCompliance(uint256 _mintAmount) {
-        require(msg.value >= cost * _mintAmount, "Insufficient funds");
-        _;
-    }
-
-    /**
-     * @dev mofidier check address is not a contract
-     */
-    modifier noContract() {
-        require(!Address.isContract(_msgSender()), "Contracts cannot mint");
-        _;
-    }
-
-    /**
-     * @dev mofidier to check the address is still have supply for minting
-     * @param _mintAmount is total minting
-     */
-    modifier nftSupplyCompliance(uint256 _mintAmount) {
-        require(
-            walletClaimNft[_msgSender()] + _mintAmount <= PUBLIC_LIMIT,
-            "NFT Limit Exceeded"
-        );
-        _;
-    }
-
-    /**
-     * ===================================================
-     *                Verification whitelist
-     * ===================================================
-     */
-    /**
-     * @dev check the address is whitelist
-     * @param _minter is address minter
-     * @param _merkleProof will get from initiate from merkleroot
-     * @param _merkleRoot that get from hashing all the whitelist address
-     */
     function _isOnList(
         address _minter,
         bytes32[] calldata _merkleProof,
@@ -132,108 +102,208 @@ contract TestingLOG is
         return MerkleProof.verify(_merkleProof, _merkleRoot, _leafe);
     }
 
-    /**
-     * ===================================================
-     *                       Minting
-     * ===================================================
-     */
-    /**
-     * @dev minting private function
-     * @dev setup up for every address only have 6 NFTs
-     * @param _mintAmount that amount of NFT want to mint
-     */
-    function _minting(uint256 _mintAmount) private {
-        walletClaimNft[_msgSender()] += _mintAmount;
-        _mintRandom(_msgSender(), _mintAmount);
+    function checkSupplyAndCost(
+        MintingFeature mintingFeature,
+        uint256 _mintingAmount
+    ) private returns (bool) {
+        if (_mintingAmount == 0) {
+            revert AmountCannotZero();
+        }
+        if (_mintingAmount > feature[mintingFeature].maxMintAmountPerTx) {
+            revert InvalidMintAmount();
+        }
+        if (totalSupply() + _mintingAmount > maxSupplyToken) {
+            revert MaxSupplyExceeded();
+        }
+        if (msg.value < feature[mintingFeature].cost * _mintingAmount) {
+            revert InsufficientFunds();
+        }
+        if (
+            feature[mintingFeature].alreadyMinted + _mintingAmount >
+            feature[mintingFeature].supplyLimit
+        ) {
+            revert MaxSupplyExceeded();
+        }
+        return true;
     }
 
-    /**
-     * @dev whitelist mint
-     * @dev every address whitelist only get 1 NFT
-     * @param _merkleProof to check and verify that the address is part of whitelist
-     */
+    function checkMaxLimitSupply(MintingFeature feature2Change, uint256 _newSupply, MintingFeature featureOne, MintingFeature featureTwo) private view returns (bool) {
+        uint256 minted = feature[feature2Change].alreadyMinted;
+        uint256 available = availabelSupply(featureOne, featureTwo);
+
+        if (_newSupply == 0) revert AmountCannotZero();
+        if (_newSupply < minted) {
+            revert WrongInputSupply();
+        }
+        if (_newSupply > available) revert SupplyInputAboveLimit();
+        return true;
+    }
+
+    function availabelSupply(MintingFeature featureOne, MintingFeature featureTwo) private view returns (uint256) {
+        uint256 maxLimitWhitelist = feature[featureOne].supplyLimit;
+        uint256 maxLimitGift = feature[featureTwo].supplyLimit;
+        uint256 _availableSupply = maxSupplyToken - (maxLimitWhitelist + maxLimitGift);
+        return _availableSupply;
+    }
+
+    function getRandomAvailableTokenId(
+        address to,
+        uint256 updatedNumAvailableTokens
+    ) internal returns (uint256) {
+        uint256 randomNum = uint256(
+            keccak256(
+                abi.encode(
+                    to,
+                    tx.gasprice,
+                    block.number,
+                    block.timestamp,
+                    block.difficulty,
+                    blockhash(block.number - 1),
+                    address(this),
+                    updatedNumAvailableTokens
+                )
+            )
+        );
+        uint256 randomIndex = randomNum % updatedNumAvailableTokens;
+        return getAvailableTokenAtIndex(randomIndex, updatedNumAvailableTokens);
+    }
+
+    function getAvailableTokenAtIndex(
+        uint256 indexToUse,
+        uint256 updatedNumAvailableTokens
+    ) internal returns (uint256) {
+        uint256 valAtIndex = _availableTokens[indexToUse];
+        uint256 result;
+        if (valAtIndex == 0) {
+            // This means the index itself is still an available token
+            result = indexToUse;
+        } else {
+            // This means the index itself is not an available token, but the val at that index is.
+            result = valAtIndex;
+        }
+
+        uint256 lastIndex = updatedNumAvailableTokens - 1;
+        uint256 lastValInArray = _availableTokens[lastIndex];
+        if (indexToUse != lastIndex) {
+            // Replace the value at indexToUse, now that it's been used.
+            // Replace it with the data from the last index in the array, since we are going to decrease the array size afterwards.
+            if (lastValInArray == 0) {
+                // This means the index itself is still an available token
+                _availableTokens[indexToUse] = lastIndex;
+            } else {
+                // This means the index itself is not an available token, but the val at that index is.
+                _availableTokens[indexToUse] = lastValInArray;
+            }
+        }
+        if (lastValInArray != 0) {
+            // Gas refund courtsey of @dievardump
+            delete _availableTokens[lastIndex];
+        }
+
+        return result;
+    }
+
+    function _minting(
+        MintingFeature mintingFeature,
+        uint256 _mintAmount,
+        address _to
+    ) private {
+        if (Address.isContract(_to)) {
+            revert ContractAddressCannotMint();
+        }
+        if (_numAvailableTokens < _mintAmount)
+            revert MintingMoreTokenThanAvailable();
+
+        uint256 updatedNumAvailableTokens = _numAvailableTokens;
+        for (uint256 i; i < _mintAmount; ++i) {
+            // Do this ++ unchecked?
+            uint256 tokenId = getRandomAvailableTokenId(
+                _to,
+                updatedNumAvailableTokens
+            );
+
+            _safeMint(_to, tokenId);
+
+            --updatedNumAvailableTokens;
+            tokenCostById[tokenId] = feature[mintingFeature].cost;
+        }
+
+        _numAvailableTokens = updatedNumAvailableTokens;
+        feature[mintingFeature].alreadyMinted += _mintAmount;
+    }
+
     function whitelistMint(bytes32[] calldata _merkleProof)
         public
         payable
         nonReentrant
-        noContract
-        mintAmountCompliance(1)
-        mintPriceCompliance(1)
-        nftSupplyCompliance(1)
     {
-        require(whitelistMintEnable, "Whitelist sale is not enabled!");
-        require(
-            whitelistMinted + 1 <= maxSupplyWhitelist,
-            "Supply whitelist exceeded"
-        );
-        require(
-            _isOnList(msg.sender, _merkleProof, merkleRootWhitelist),
-            "Invalid proof"
-        );
-        require(!whitelistClaimed[_msgSender()], "Address already claimed");
-        whitelistClaimed[_msgSender()] = true;
-        _minting(1);
+        if (!feature[MintingFeature.whitelistMinting].toggle) {
+            revert WhitelistSaleDisable();
+        }
+
+        if (
+            !_isOnList(
+                _msgSender(),
+                _merkleProof,
+                verify[VerifyFeature.whitelist].merkleRoot
+            )
+        ) {
+            revert InvalidProof();
+        }
+
+        if (_whitelistClaimed[_msgSender()]) {
+            revert AddressWhitelistAlreadyClaimed();
+        }
+
+        if (checkSupplyAndCost(MintingFeature.whitelistMinting, 1)) {
+            _whitelistClaimed[_msgSender()] = true;
+            _minting(MintingFeature.whitelistMinting, 1, _msgSender());
+        }
     }
 
-    /**
-     * @dev minting for public
-     * amount NFT can provide is only 3 in one tx
-     * in one address only have 6 nft for the limit
-     * @param _mintAmount is mount of nft will mint
-     */
-    function publicMint(uint256 _mintAmount)
-        public
-        payable
-        nonReentrant
-        noContract
-        mintAmountCompliance(_mintAmount)
-        mintPriceCompliance(_mintAmount)
-        nftSupplyCompliance(_mintAmount)
-    {
-        require(!paused, "The contract is paused!");
-        require(
-            publicMinted + _mintAmount <= MAX_SUPPLY - maxSupplyWhitelist,
-            "Supply public exceeded"
-        );
-        _minting(1);
+    function publicMint(uint256 _mintAmount) public payable nonReentrant {
+        if (!feature[MintingFeature.publicMinting].toggle) {
+            revert PublicDisable();
+        }
+        if (walletClaimNft[_msgSender()] + _mintAmount > BATCH_SIZE) {
+            revert NftLimitAddressExceeded();
+        }
+        if (checkSupplyAndCost(MintingFeature.publicMinting, _mintAmount)) {
+            walletClaimNft[_msgSender()] += _mintAmount;
+            _minting(MintingFeature.publicMinting, _mintAmount, _msgSender());
+        }
     }
 
-    /**
-     * @dev gift minting that only owner can use this function
-     * @dev every _receiver address only get 1 nft
-     * @param _receiver is address that want to gift the nft
-     */
     function giftMint(address[] calldata _receiver)
         external
         nonReentrant
         onlyOwner
-        mintAmountCompliance(_receiver.length)
     {
-        for (uint256 i = 0; i < _receiver.length; i++) {
-            _mintRandom(_receiver[i], 1);
+        uint256 _amount = _receiver.length;
+        if (checkSupplyAndCost(MintingFeature.giftMinting, _amount)) {
+            for (uint256 i = 0; i < _amount; i++) {
+                _minting(MintingFeature.giftMinting, 1, _receiver[i]);
+            }
         }
     }
 
-    /**
-     * ===================================================
-     *                       Refund
-     * ===================================================
-     */
-    /**
-     * @dev refund feature
-     * @dev refund open when the the feature is on
-     * @param tokenIds is a token that represent from nft that want to refund
-     */
     function refund(
         uint256[] calldata tokenIds,
         bytes32[] calldata _merkleProof
     ) public nonReentrant {
-        require(refundEndToogle, "Refund expired");
-        require(
-            _isOnList(msg.sender, _merkleProof, merkleRootRefund),
-            "Invalid proof"
-        );
-
+        if (!refundToggle) {
+            revert RefundDisable();
+        }
+        if (
+            !_isOnList(
+                msg.sender,
+                _merkleProof,
+                verify[VerifyFeature.refund].merkleRoot
+            )
+        ) {
+            revert InvalidProof();
+        }
+        uint256 price;
         for (uint256 i = 0; i < tokenIds.length; i++) {
             uint256 tokenId = tokenIds[i];
             require(_exists(tokenId), "Token is not exist");
@@ -241,43 +311,30 @@ contract TestingLOG is
             require(!hashRefund[tokenId], "Already refunded");
             hashRefund[tokenId] = true;
             transferFrom(msg.sender, owner(), tokenId);
+            price += tokenCostById[tokenId];
         }
 
-        uint256 refundAmount = tokenIds.length * cost;
+        // need update and make sure it is correct
+        uint256 refundAmount = tokenIds.length * price;
         Address.sendValue(payable(msg.sender), refundAmount);
     }
 
-    /**
-     * ===================================================
-     *                     Withdraw
-     * ===================================================
-     */
-    /**
-     * @dev withdraw feature that only owner can do it
-     * @dev cen do withdraw if refund feature and minitng whitelist section is off
-     */
     function withdraw() external onlyOwner nonReentrant {
+        if (
+            refundToggle ||
+            feature[MintingFeature.whitelistMinting].toggle ||
+            feature[MintingFeature.publicMinting].toggle
+        ) {
+            revert NeedAllFeaturesOff();
+        }
         uint256 balance = address(this).balance;
-        require(
-            !refundEndToogle && !whitelistMintEnable,
-            "Not in the right time"
-        );
-        require(balance > 0, "Failed: no funds to withdraw");
+        if (balance == 0) revert InsufficientFunds();
         Address.sendValue(
             payable(0x21d1E1577689550148722737aEB0aE6935941aaa),
             balance
         );
     }
 
-    /**
-     * ===================================================
-     *                     Metadata
-     * ===================================================
-     */
-    /**
-     * @dev setup the metadata token URI for opensea
-     * @param _tokenId is the token nft to set the metadata
-     */
     function tokenURI(uint256 _tokenId)
         public
         view
@@ -285,7 +342,7 @@ contract TestingLOG is
         override
         returns (string memory)
     {
-        require(_exists(_tokenId), "URI query for nonexistent token");
+        if (!_exists(_tokenId)) revert NonExistToken();
         string memory currentBaseURI = (revealed == false)
             ? hiddenMetadata
             : _baseURI();
@@ -305,16 +362,6 @@ contract TestingLOG is
         return uriPrefix;
     }
 
-    /**
-     * ===================================================
-     *                    Set Function
-     * ===================================================
-     */
-    /**
-     * @dev set the general image (hidden metadata) before reveal the nft
-     * This is hidden metadata
-     * @param _hiddenMetadataUri is a CID from ipfs that contain the general image
-     */
     function setHiddenMetadata(string memory _hiddenMetadataUri)
         public
         onlyOwner
@@ -322,91 +369,66 @@ contract TestingLOG is
         hiddenMetadata = _hiddenMetadataUri;
     }
 
-    /**
-     * @dev set the real nft character
-     * @param _uriPrefix is URI from CID ipfs that contain
-     */
     function setUriPrefix(string memory _uriPrefix) public onlyOwner {
         uriPrefix = _uriPrefix;
     }
 
-    /**
-     * @dev set hte reveal toogle
-     * @param _state is a state to set the reveal feature
-     */
     function setRevealed(bool _state) public onlyOwner {
         revealed = _state;
     }
 
-    /**
-     * @dev set hte maximum mount nft for minting
-     * @param _maxMintAmountPerTx is maximum mount
-     */
-    function setMaxMintAmountPerTx(uint256 _maxMintAmountPerTx)
+    function setMaxMintAmountPerTxPublic(uint256 _maxMintAmountPerTx)
         public
         onlyOwner
     {
-        maxMintAmountPerTx = _maxMintAmountPerTx;
+        feature[MintingFeature.publicMinting]
+            .maxMintAmountPerTx = _maxMintAmountPerTx;
     }
 
-    /**
-     * @dev set the cost for every minting
-     * @param _cost is price of nft
-     */
-    function setCost(uint256 _cost) public onlyOwner {
-        cost = _cost;
+    function setCostPublic(uint256 _cost) public onlyOwner {
+        feature[MintingFeature.publicMinting].cost = _cost;
     }
 
-    /**
-     * @dev set the merkleroot whitelist for verify
-     */
+    function setCostWhitelist(uint256 _cost) public onlyOwner {
+        feature[MintingFeature.whitelistMinting].cost = _cost;
+    }
+
     function setMerkleRootWhitelist(bytes32 _merkleRoot) external onlyOwner {
-        merkleRootWhitelist = _merkleRoot;
+        verify[VerifyFeature.whitelist].merkleRoot = _merkleRoot;
     }
 
-    /**
-     * @dev set the merkleroot Refund for verify
-     */
     function setMerkleRootRefund(bytes32 _merkleRoot) external onlyOwner {
-        merkleRootRefund = _merkleRoot;
+        verify[VerifyFeature.refund].merkleRoot = _merkleRoot;
     }
 
-    function setMaxWhitelistSupply(uint256 _supply) external onlyOwner {
-        require(_supply > whitelistMinted, "Wrong input");
-        require(
-            _supply <= MAX_SUPPLY - totalSupply(),
-            "Input to much from supply"
-        );
-        maxSupplyWhitelist = _supply;
+    function setMaxSupplyPublic(uint256 _newSupply) public onlyOwner {
+        if (checkMaxLimitSupply(MintingFeature.publicMinting, _newSupply, MintingFeature.whitelistMinting, MintingFeature.giftMinting)) {
+            feature[MintingFeature.publicMinting].supplyLimit = _newSupply;
+        }
     }
 
-    /**
-     * ===================================================
-     *                    Pause/Unpause
-     * ===================================================
-     */
-    /**
-     * @dev to set the contract is can minting or not
-     * @param _state is toogle to turn on/off
-     */
-    function setPaused(bool _state) public onlyOwner {
-        paused = _state;
+    function setMaxSupplyWhitelist(uint256 _newSupply) public onlyOwner {
+        if (checkMaxLimitSupply(MintingFeature.whitelistMinting, _newSupply, MintingFeature.publicMinting, MintingFeature.giftMinting)) {
+            feature[MintingFeature.whitelistMinting].supplyLimit = _newSupply;
+        }
     }
 
-    /**
-     * @dev to set the minitng whitelist feature
-     * @param _state is toogle to turn on/off
-     */
-    function setWhitelistMintEnabled(bool _state) public onlyOwner {
-        whitelistMintEnable = _state;
+    function setMaxSupplyGift(uint256 _newSupply) public onlyOwner {
+        if (checkMaxLimitSupply(MintingFeature.giftMinting, _newSupply, MintingFeature.whitelistMinting, MintingFeature.publicMinting)) {
+            feature[MintingFeature.giftMinting].supplyLimit = _newSupply;
+        }
     }
 
-    /**
-     * @dev toogle to open refund feature
-     * @param _refundEndToogle is a toogle to set on/off the feature
-     */
+    function setPublicMintEnable(bool toggle) public onlyOwner {
+        feature[MintingFeature.publicMinting].toggle = toggle;
+    }
+
+    function setWhitelistMintEnable(bool toggle) public onlyOwner {
+        feature[MintingFeature.whitelistMinting].toggle = toggle;
+    }
+
     function setToogleForRefund(bool _refundEndToogle) external onlyOwner {
-        refundEndToogle = _refundEndToogle;
+        refundToggle = _refundEndToogle;
     }
 
     /**
@@ -416,7 +438,7 @@ contract TestingLOG is
      */
     function setApprovalForAll(address operator, bool approved)
         public
-        override
+        override(ERC721, IERC721)
         onlyAllowedOperatorApproval(operator)
     {
         super.setApprovalForAll(operator, approved);
@@ -424,7 +446,7 @@ contract TestingLOG is
 
     function approve(address operator, uint256 tokenId)
         public
-        override
+        override(ERC721, IERC721)
         //payable
         onlyAllowedOperatorApproval(operator)
     {
@@ -435,7 +457,7 @@ contract TestingLOG is
         address from,
         address to,
         uint256 tokenId
-    ) public override onlyAllowedOperator(from) {
+    ) public override(ERC721, IERC721) onlyAllowedOperator(from) {
         super.transferFrom(from, to, tokenId);
     }
 
@@ -443,7 +465,7 @@ contract TestingLOG is
         address from,
         address to,
         uint256 tokenId
-    ) public override onlyAllowedOperator(from) {
+    ) public override(ERC721, IERC721) onlyAllowedOperator(from) {
         super.safeTransferFrom(from, to, tokenId);
     }
 
@@ -452,7 +474,7 @@ contract TestingLOG is
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public override onlyAllowedOperator(from) {
+    ) public override(ERC721, IERC721) onlyAllowedOperator(from) {
         super.safeTransferFrom(from, to, tokenId, data);
     }
 }
