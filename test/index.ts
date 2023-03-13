@@ -279,7 +279,7 @@ describe(CollectionConfig.contractName, function () {
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(
-    contract.connect(externalUser).setUriPrefix("INVALID_PREFIX")
+    contract.connect(externalUser).setMetadataBaseUri("INVALID_PREFIX")
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(

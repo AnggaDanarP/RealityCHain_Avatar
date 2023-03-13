@@ -57,9 +57,6 @@ contract TestingLOG is
         uint256 alreadyMinted;
         bool toggle;
     }
-    struct Verification {
-        bytes32 merkleRoot;
-    }
 
     enum MintingFeature {
         publicMinting,
@@ -73,7 +70,7 @@ contract TestingLOG is
     }
 
     mapping(MintingFeature => NftSpec) public feature;
-    mapping(VerifyFeature => Verification) public verify;
+    mapping(VerifyFeature => bytes32) public merkleRoot;
     mapping(address => bool) private _whitelistClaimed;
     mapping(address => uint256) private walletClaimNft;
     mapping(uint256 => bool) private hashRefund;
@@ -92,8 +89,8 @@ contract TestingLOG is
         feature[MintingFeature.publicMinting] = NftSpec(2000, 0.02 ether, 3, 0, false );
         feature[MintingFeature.whitelistMinting] = NftSpec(1000, 0.015 ether, 1, 0, false );
         feature[MintingFeature.giftMinting] = NftSpec(200, 0, 200, 0, true);
-        verify[VerifyFeature.whitelist] = Verification(0);
-        verify[VerifyFeature.refund] = Verification(0);
+        merkleRoot[VerifyFeature.whitelist] = 0;
+        merkleRoot[VerifyFeature.refund] = 0;
     }
 
     function _isOnList(
@@ -250,7 +247,7 @@ contract TestingLOG is
             !_isOnList(
                 _msgSender(),
                 _merkleProof,
-                verify[VerifyFeature.whitelist].merkleRoot
+                merkleRoot[VerifyFeature.whitelist]
             )
         ) {
             revert InvalidProof();
@@ -304,7 +301,7 @@ contract TestingLOG is
             !_isOnList(
                 msg.sender,
                 _merkleProof,
-                verify[VerifyFeature.refund].merkleRoot
+                merkleRoot[VerifyFeature.refund]
             )
         ) {
             revert InvalidProof();
@@ -372,7 +369,7 @@ contract TestingLOG is
         hiddenMetadata = _hiddenMetadataUri;
     }
 
-    function setUriPrefix(string memory _uriPrefix) public onlyOwner {
+    function setMetadataBaseUri(string memory _uriPrefix) public onlyOwner {
         uriPrefix = _uriPrefix;
     }
 
@@ -397,11 +394,11 @@ contract TestingLOG is
     }
 
     function setMerkleRootWhitelist(bytes32 _merkleRoot) external onlyOwner {
-        verify[VerifyFeature.whitelist].merkleRoot = _merkleRoot;
+        merkleRoot[VerifyFeature.whitelist] = _merkleRoot;
     }
 
     function setMerkleRootRefund(bytes32 _merkleRoot) external onlyOwner {
-        verify[VerifyFeature.refund].merkleRoot = _merkleRoot;
+        merkleRoot[VerifyFeature.refund] = _merkleRoot;
     }
 
     function setMaxSupplyPublic(uint256 _newSupply) public onlyOwner {
