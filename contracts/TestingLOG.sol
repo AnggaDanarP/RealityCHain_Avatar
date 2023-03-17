@@ -72,23 +72,23 @@ contract TestingLOG is
     mapping(MintingFeature => NftSpec) public feature;
     mapping(VerifyFeature => bytes32) public merkleRoot;
     mapping(address => bool) private _whitelistClaimed;
-    mapping(address => uint256) private walletClaimNft;
-    mapping(uint256 => bool) private hashRefund;
+    mapping(address => uint256) private _publicClaimNft;
+    mapping(uint256 => bool) private _hashRefund;
     mapping(uint256 => uint256) private _availableTokens;
-    mapping(uint256 => uint256) private tokenCostById;
 
     event Minting(address to, uint256 tokenId);
     event Refund(address from, uint256 tokenId, uint256 costToken);
 
-    constructor(uint256 _maxSupplyAvailable, string memory _hiddenMetadata)
-        ERC721("Testing-LOG", "TLOG")
-    {
-        setHiddenMetadata(_hiddenMetadata);
+    constructor(
+        uint256 _maxSupplyAvailable,
+        string memory _hiddenMetadata
+    ) ERC721("Testing-LOG", "TLOG") {
+        hiddenMetadata = _hiddenMetadata;
         maxSupplyToken = _maxSupplyAvailable;
         _numAvailableTokens = _maxSupplyAvailable;
-        feature[MintingFeature.publicMinting] = NftSpec(2000, 0.02 ether, 3, 0, false );
-        feature[MintingFeature.whitelistMinting] = NftSpec(1000, 0.015 ether, 1, 0, false );
-        feature[MintingFeature.giftMinting] = NftSpec(200, 0, 200, 0, true);
+        feature[MintingFeature.publicMinting] = NftSpec(2000, 0.02 ether, 3, 1, false);
+        feature[MintingFeature.whitelistMinting] = NftSpec(1000, 0.015 ether, 1, 1, false);
+        feature[MintingFeature.giftMinting] = NftSpec(200, 0, 200, 1, true);
         merkleRoot[VerifyFeature.whitelist] = 0;
         merkleRoot[VerifyFeature.refund] = 0;
     }
@@ -106,6 +106,9 @@ contract TestingLOG is
         MintingFeature mintingFeature,
         uint256 _mintingAmount
     ) private returns (bool) {
+        uint256 _cost = feature[mintingFeature].cost;
+        uint256 _alreadyMinted = feature[mintingFeature].alreadyMinted;
+
         if (_mintingAmount == 0) {
             revert AmountCannotZero();
         }
@@ -115,41 +118,57 @@ contract TestingLOG is
         if (totalSupply() + _mintingAmount > maxSupplyToken) {
             revert MaxSupplyExceeded();
         }
-        if (msg.value < feature[mintingFeature].cost * _mintingAmount) {
+        if (msg.value < _cost * _mintingAmount) {
             revert InsufficientFunds();
         }
-        if (
-            feature[mintingFeature].alreadyMinted + _mintingAmount >
-            feature[mintingFeature].supplyLimit
-        ) {
+        if ((_alreadyMinted + _mintingAmount) - 1 > feature[mintingFeature].supplyLimit) {
             revert MaxSupplyExceeded();
         }
         return true;
     }
 
-    function checkMaxLimitSupply(MintingFeature feature2Change, uint256 _newSupply, MintingFeature featureOne, MintingFeature featureTwo) private view returns (bool) {
-        uint256 minted = feature[feature2Change].alreadyMinted;
+    function checkMaxLimitSupply(
+        MintingFeature feature2Change,
+        uint256 _newSupply,
+        MintingFeature featureOne,
+        MintingFeature featureTwo
+    ) private view returns (bool) {
         uint256 available = availabelSupply(featureOne, featureTwo);
 
         if (_newSupply == 0) revert AmountCannotZero();
-        if (_newSupply < minted) {
+        if (_newSupply < feature[feature2Change].alreadyMinted) {
             revert WrongInputSupply();
         }
         if (_newSupply > available) revert SupplyInputAboveLimit();
         return true;
     }
 
-    function availabelSupply(MintingFeature featureOne, MintingFeature featureTwo) private view returns (uint256) {
-        uint256 maxLimitWhitelist = feature[featureOne].supplyLimit;
-        uint256 maxLimitGift = feature[featureTwo].supplyLimit;
-        uint256 _availableSupply = maxSupplyToken - (maxLimitWhitelist + maxLimitGift);
-        return _availableSupply;
+    function availabelSupply(
+        MintingFeature featureOne,
+        MintingFeature featureTwo
+    ) private view returns (uint256) {
+        uint256 _maxLimitWhitelist = feature[featureOne].supplyLimit;
+        uint256 _maxLimitGift = feature[featureTwo].supplyLimit;
+        uint256 _maxSupplyToken = maxSupplyToken;
+        return _maxSupplyToken - (_maxLimitWhitelist + _maxLimitGift);
+    }
+
+    function getCostToken() private view returns (uint256) {
+        if (feature[MintingFeature.whitelistMinting].toggle) {
+            return feature[MintingFeature.whitelistMinting].cost;
+        }
+
+        if (feature[MintingFeature.publicMinting].toggle) {
+            return feature[MintingFeature.publicMinting].cost;
+        }
+
+        return 0;
     }
 
     function getRandomAvailableTokenId(
         address to,
         uint256 updatedNumAvailableTokens
-    ) internal returns (uint256) {
+    ) private returns (uint256) {
         uint256 randomNum = uint256(
             keccak256(
                 abi.encode(
@@ -171,7 +190,7 @@ contract TestingLOG is
     function getAvailableTokenAtIndex(
         uint256 indexToUse,
         uint256 updatedNumAvailableTokens
-    ) internal returns (uint256) {
+    ) private returns (uint256) {
         uint256 valAtIndex = _availableTokens[indexToUse];
         uint256 result;
         if (valAtIndex == 0) {
@@ -208,13 +227,14 @@ contract TestingLOG is
         uint256 _mintAmount,
         address _to
     ) private {
+        uint256 updatedNumAvailableTokens = _numAvailableTokens;
+
         if (Address.isContract(_to)) {
             revert ContractAddressCannotMint();
         }
-        if (_numAvailableTokens < _mintAmount)
+        if (updatedNumAvailableTokens < _mintAmount)
             revert MintingMoreTokenThanAvailable();
 
-        uint256 updatedNumAvailableTokens = _numAvailableTokens;
         for (uint256 i; i < _mintAmount; ++i) {
             // Do this ++ unchecked?
             uint256 tokenId = getRandomAvailableTokenId(
@@ -222,10 +242,11 @@ contract TestingLOG is
                 updatedNumAvailableTokens
             );
 
-            _safeMint(_to, tokenId);
+            _mint(_to, tokenId);
 
-            --updatedNumAvailableTokens;
-            tokenCostById[tokenId] = feature[mintingFeature].cost;
+            unchecked {
+                --updatedNumAvailableTokens;
+            }
 
             emit Minting(_to, tokenId);
         }
@@ -234,22 +255,16 @@ contract TestingLOG is
         feature[mintingFeature].alreadyMinted += _mintAmount;
     }
 
-    function whitelistMint(bytes32[] calldata _merkleProof)
-        public
-        payable
-        nonReentrant
-    {
+    function whitelistMint(
+        bytes32[] calldata _merkleProof
+    ) external payable {
+        bytes32 _merkleRootWhitelist = merkleRoot[VerifyFeature.whitelist];
+
         if (!feature[MintingFeature.whitelistMinting].toggle) {
             revert WhitelistSaleDisable();
         }
 
-        if (
-            !_isOnList(
-                _msgSender(),
-                _merkleProof,
-                merkleRoot[VerifyFeature.whitelist]
-            )
-        ) {
+        if (!_isOnList(_msgSender(), _merkleProof, _merkleRootWhitelist)) {
             revert InvalidProof();
         }
 
@@ -263,24 +278,24 @@ contract TestingLOG is
         }
     }
 
-    function publicMint(uint256 _mintAmount) public payable nonReentrant {
+    function publicMint(uint256 _mintAmount) external payable {
         if (!feature[MintingFeature.publicMinting].toggle) {
             revert PublicDisable();
         }
-        if (walletClaimNft[_msgSender()] + _mintAmount > BATCH_SIZE) {
+
+        if ((_publicClaimNft[_msgSender()] + _mintAmount) > BATCH_SIZE) {
             revert NftLimitAddressExceeded();
         }
+
         if (checkSupplyAndCost(MintingFeature.publicMinting, _mintAmount)) {
-            walletClaimNft[_msgSender()] += _mintAmount;
+            _publicClaimNft[_msgSender()] += _mintAmount;
             _minting(MintingFeature.publicMinting, _mintAmount, _msgSender());
         }
     }
 
-    function giftMint(address[] calldata _receiver)
-        external
-        nonReentrant
-        onlyOwner
-    {
+    function giftMint(
+        address[] calldata _receiver
+    ) external onlyOwner {
         uint256 _amount = _receiver.length;
         if (checkSupplyAndCost(MintingFeature.giftMinting, _amount)) {
             for (uint256 i = 0; i < _amount; i++) {
@@ -292,26 +307,22 @@ contract TestingLOG is
     function refund(
         uint256 tokenId,
         bytes32[] calldata _merkleProof
-    ) public nonReentrant {
+    ) external nonReentrant {
+        bytes32 _merkleRootRefund = merkleRoot[VerifyFeature.refund];
+
         if (!refundToggle) {
             revert RefundDisable();
         }
 
-        if (
-            !_isOnList(
-                msg.sender,
-                _merkleProof,
-                merkleRoot[VerifyFeature.refund]
-            )
-        ) {
+        if (!_isOnList(_msgSender(), _merkleProof, _merkleRootRefund)) {
             revert InvalidProof();
         }
         if (!_exists(tokenId)) revert NonExistToken();
         if (_msgSender() != ownerOf(tokenId)) revert NotTokenOwner();
-        if (hashRefund[tokenId]) revert TokenAlreadyRefunded();
+        if (_hashRefund[tokenId]) revert TokenAlreadyRefunded();
 
-        uint256 priceToReturn = tokenCostById[tokenId];
-        hashRefund[tokenId] = true;
+        uint256 priceToReturn = getCostToken();
+        _hashRefund[tokenId] = true;
         transferFrom(msg.sender, owner(), tokenId);
 
         Address.sendValue(payable(_msgSender()), priceToReturn);
@@ -319,7 +330,7 @@ contract TestingLOG is
         emit Refund(_msgSender(), tokenId, priceToReturn);
     }
 
-    function withdraw() external onlyOwner nonReentrant {
+    function withdraw() external onlyOwner {
         if (
             refundToggle ||
             feature[MintingFeature.whitelistMinting].toggle ||
@@ -329,19 +340,12 @@ contract TestingLOG is
         }
         uint256 balance = address(this).balance;
         if (balance == 0) revert InsufficientFunds();
-        Address.sendValue(
-            payable(0x21d1E1577689550148722737aEB0aE6935941aaa),
-            balance
-        );
+        Address.sendValue(payable(0x21d1E1577689550148722737aEB0aE6935941aaa), balance);
     }
 
-    function tokenURI(uint256 _tokenId)
-        public
-        view
-        virtual
-        override
-        returns (string memory)
-    {
+    function tokenURI(
+        uint256 _tokenId
+    ) public view virtual override returns (string memory) {
         if (!_exists(_tokenId)) revert NonExistToken();
         string memory currentBaseURI = (revealed == false)
             ? hiddenMetadata
@@ -362,34 +366,31 @@ contract TestingLOG is
         return uriPrefix;
     }
 
-    function setHiddenMetadata(string memory _hiddenMetadataUri)
-        public
-        onlyOwner
-    {
+    function setHiddenMetadata(
+        string memory _hiddenMetadataUri
+    ) external onlyOwner {
         hiddenMetadata = _hiddenMetadataUri;
     }
 
-    function setMetadataBaseUri(string memory _uriPrefix) public onlyOwner {
+    function setMetadataBaseUri(string memory _uriPrefix) external onlyOwner {
         uriPrefix = _uriPrefix;
     }
 
-    function setRevealed(bool _state) public onlyOwner {
+    function setRevealed(bool _state) external onlyOwner {
         revealed = _state;
     }
 
-    function setMaxMintAmountPerTxPublic(uint256 _maxMintAmountPerTx)
-        public
-        onlyOwner
-    {
-        feature[MintingFeature.publicMinting]
-            .maxMintAmountPerTx = _maxMintAmountPerTx;
+    function setMaxMintAmountPerTxPublic(
+        uint256 _maxMintAmountPerTx
+    ) external onlyOwner {
+        feature[MintingFeature.publicMinting].maxMintAmountPerTx = _maxMintAmountPerTx;
     }
 
-    function setCostPublic(uint256 _cost) public onlyOwner {
+    function setCostPublic(uint256 _cost) external onlyOwner {
         feature[MintingFeature.publicMinting].cost = _cost;
     }
 
-    function setCostWhitelist(uint256 _cost) public onlyOwner {
+    function setCostWhitelist(uint256 _cost) external onlyOwner {
         feature[MintingFeature.whitelistMinting].cost = _cost;
     }
 
@@ -401,29 +402,50 @@ contract TestingLOG is
         merkleRoot[VerifyFeature.refund] = _merkleRoot;
     }
 
-    function setMaxSupplyPublic(uint256 _newSupply) public onlyOwner {
-        if (checkMaxLimitSupply(MintingFeature.publicMinting, _newSupply, MintingFeature.whitelistMinting, MintingFeature.giftMinting)) {
+    function setMaxSupplyPublic(uint256 _newSupply) external onlyOwner {
+        if (
+            checkMaxLimitSupply(
+                MintingFeature.publicMinting,
+                _newSupply,
+                MintingFeature.whitelistMinting,
+                MintingFeature.giftMinting
+            )
+        ) {
             feature[MintingFeature.publicMinting].supplyLimit = _newSupply;
         }
     }
 
-    function setMaxSupplyWhitelist(uint256 _newSupply) public onlyOwner {
-        if (checkMaxLimitSupply(MintingFeature.whitelistMinting, _newSupply, MintingFeature.publicMinting, MintingFeature.giftMinting)) {
+    function setMaxSupplyWhitelist(uint256 _newSupply) external onlyOwner {
+        if (
+            checkMaxLimitSupply(
+                MintingFeature.whitelistMinting,
+                _newSupply,
+                MintingFeature.publicMinting,
+                MintingFeature.giftMinting
+            )
+        ) {
             feature[MintingFeature.whitelistMinting].supplyLimit = _newSupply;
         }
     }
 
-    function setMaxSupplyGift(uint256 _newSupply) public onlyOwner {
-        if (checkMaxLimitSupply(MintingFeature.giftMinting, _newSupply, MintingFeature.whitelistMinting, MintingFeature.publicMinting)) {
+    function setMaxSupplyGift(uint256 _newSupply) external onlyOwner {
+        if (
+            checkMaxLimitSupply(
+                MintingFeature.giftMinting,
+                _newSupply,
+                MintingFeature.whitelistMinting,
+                MintingFeature.publicMinting
+            )
+        ) {
             feature[MintingFeature.giftMinting].supplyLimit = _newSupply;
         }
     }
 
-    function setPublicMintEnable(bool toggle) public onlyOwner {
+    function setPublicMintEnable(bool toggle) external onlyOwner {
         feature[MintingFeature.publicMinting].toggle = toggle;
     }
 
-    function setWhitelistMintEnable(bool toggle) public onlyOwner {
+    function setWhitelistMintEnable(bool toggle) external onlyOwner {
         feature[MintingFeature.whitelistMinting].toggle = toggle;
     }
 
@@ -436,15 +458,17 @@ contract TestingLOG is
      *                       Override
      * ===================================================
      */
-    function setApprovalForAll(address operator, bool approved)
-        public
-        override(ERC721, IERC721)
-        onlyAllowedOperatorApproval(operator)
-    {
+    function setApprovalForAll(
+        address operator,
+        bool approved
+    ) public override(ERC721, IERC721) onlyAllowedOperatorApproval(operator) {
         super.setApprovalForAll(operator, approved);
     }
 
-    function approve(address operator, uint256 tokenId)
+    function approve(
+        address operator,
+        uint256 tokenId
+    )
         public
         override(ERC721, IERC721)
         //payable

@@ -10,7 +10,7 @@ const CollectionConfig: CollectionConfigInterface = {
     contractName: "TestingLOG",
     maxSupply: 5555,
     hiddenMetadata: "ipfs://QmdsoAhzoLeiTfsd518WGgVBYV6Ld9BfrrRnTh4orLjHfG/",
-    contractAddress: "0x02196b33c5CFD6Ac54CC7d3E6ECb5d86ac9681Ce",
+    contractAddress: "0x1Db90392e07F591A989408114229f166710472c0",
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
     whiteListAddresses: whitelistAddress, // on changes

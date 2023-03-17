@@ -92,7 +92,7 @@ describe(CollectionConfig.contractName, function () {
     );
     expect((await contract.feature(0)).supplyLimit).to.equal(2000);
     expect((await contract.feature(0)).maxMintAmountPerTx).to.equal(3);
-    expect((await contract.feature(0)).alreadyMinted).to.equal(0);
+    expect((await contract.feature(0)).alreadyMinted).to.equal(1);
     expect((await contract.feature(0)).toggle).to.equal(false);
 
     // chack for whitelist mint feature
@@ -102,7 +102,7 @@ describe(CollectionConfig.contractName, function () {
     );
     expect((await contract.feature(1)).supplyLimit).to.equal(1000);
     expect((await contract.feature(1)).maxMintAmountPerTx).to.equal(1);
-    expect((await contract.feature(1)).alreadyMinted).to.equal(0);
+    expect((await contract.feature(1)).alreadyMinted).to.equal(1);
     expect((await contract.feature(1)).toggle).to.equal(false);
 
     // chack for gift mint feature
@@ -112,7 +112,7 @@ describe(CollectionConfig.contractName, function () {
     );
     expect((await contract.feature(2)).supplyLimit).to.equal(200);
     expect((await contract.feature(2)).maxMintAmountPerTx).to.equal(200);
-    expect((await contract.feature(2)).alreadyMinted).to.equal(0);
+    expect((await contract.feature(2)).alreadyMinted).to.equal(1);
     expect((await contract.feature(2)).toggle).to.equal(true);
 
     await expect(contract.tokenURI(1)).to.be.revertedWith("NonExistToken()");
@@ -216,6 +216,11 @@ describe(CollectionConfig.contractName, function () {
   it("Public-sale", async function () {
     await contract.setPublicMintEnable(true);
 
+    // Sending an invalid mint amount
+    await expect(contract.connect(whitelistedUser).publicMint(
+      4, { value: costPublic.mul(4)}))
+  .to.be.revertedWith("InvalidMintAmount()");
+
     // success
     await contract.connect(holder).publicMint(
         3, { value: costPublic.mul(3)}
@@ -229,11 +234,6 @@ describe(CollectionConfig.contractName, function () {
     await expect(contract.connect(holder).publicMint(
         1, { value: costPublic.sub(2) }
     )).to.be.rejectedWith(Error,"InsufficientFunds()");
-
-    // Sending an invalid mint amount
-    await expect(contract.connect(whitelistedUser).publicMint(
-        4, { value: costPublic.mul(4)}))
-    .to.be.revertedWith("InvalidMintAmount()");
 
     // Sending an 0 mint amount
     await expect(contract.connect(holder).publicMint(
@@ -385,8 +385,6 @@ describe(CollectionConfig.contractName, function () {
 
     // return the value to 2000
     await contract.connect(owner).setMaxSupplyPublic(2000);
-
-
     
   });
 
