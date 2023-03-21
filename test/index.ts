@@ -93,7 +93,7 @@ describe(CollectionConfig.contractName, function () {
     expect((await contract.feature(0)).supplyLimit).to.equal(2000);
     expect((await contract.feature(0)).maxMintAmountPerTx).to.equal(3);
     expect((await contract.feature(0)).alreadyMinted).to.equal(1);
-    expect((await contract.feature(0)).toggle).to.equal(false);
+    expect((await contract.feature(0)).toggle).to.equal(1);
 
     // chack for whitelist mint feature
     let costWhitelist = 0.015;
@@ -103,7 +103,7 @@ describe(CollectionConfig.contractName, function () {
     expect((await contract.feature(1)).supplyLimit).to.equal(1000);
     expect((await contract.feature(1)).maxMintAmountPerTx).to.equal(1);
     expect((await contract.feature(1)).alreadyMinted).to.equal(1);
-    expect((await contract.feature(1)).toggle).to.equal(false);
+    expect((await contract.feature(1)).toggle).to.equal(1);
 
     // chack for gift mint feature
     let costGift = 0;
@@ -113,7 +113,7 @@ describe(CollectionConfig.contractName, function () {
     expect((await contract.feature(2)).supplyLimit).to.equal(200);
     expect((await contract.feature(2)).maxMintAmountPerTx).to.equal(200);
     expect((await contract.feature(2)).alreadyMinted).to.equal(1);
-    expect((await contract.feature(2)).toggle).to.equal(true);
+    expect((await contract.feature(2)).toggle).to.equal(2);
 
     await expect(contract.tokenURI(1)).to.be.revertedWith("NonExistToken()");
   });
@@ -155,6 +155,17 @@ describe(CollectionConfig.contractName, function () {
     );
   });
 
+  it("Toggle for whtelist and public mint", async function () {
+    // value is must beetween 1 or 2. 1 is false and 2 is true
+    // if the value is not 1 or 2, it will be error
+
+    await expect(contract.setWhitelistMintEnable(0)).to.be.revertedWith("ToggleInputInvalid()");
+    await expect(contract.setPublicMintEnable(0)).to.be.revertedWith("ToggleInputInvalid()");
+
+    await expect(contract.setWhitelistMintEnable(3)).to.be.revertedWith("ToggleInputInvalid()");
+    await expect(contract.setPublicMintEnable(3)).to.be.revertedWith("ToggleInputInvalid()");
+  })
+
   it("Whitelist sale", async function () {
     // Bild merkleTree
     const leafNode = whitelistAddresses.map((addr) => keccak256(addr));
@@ -165,7 +176,7 @@ describe(CollectionConfig.contractName, function () {
       await contract.setMerkleRootWhitelist("0x" + rootHash.toString("hex"))
     ).wait();
 
-    await contract.setWhitelistMintEnable(true);
+    await contract.setWhitelistMintEnable(2);
 
     // sending insufficient funds
     await expect(contract.connect(whitelistedUser).whitelistMint(
@@ -204,7 +215,7 @@ describe(CollectionConfig.contractName, function () {
     ).to.be.revertedWith("AddressWhitelistAlreadyClaimed()");
 
     // Pause whitelis sale
-    await contract.setWhitelistMintEnable(false);
+    await contract.setWhitelistMintEnable(1);
 
     // check balance
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
@@ -214,7 +225,7 @@ describe(CollectionConfig.contractName, function () {
   });
 
   it("Public-sale", async function () {
-    await contract.setPublicMintEnable(true);
+    await contract.setPublicMintEnable(2);
 
     // Sending an invalid mint amount
     await expect(contract.connect(whitelistedUser).publicMint(
@@ -251,7 +262,7 @@ describe(CollectionConfig.contractName, function () {
     .to.be.revertedWith("NftLimitAddressExceeded()");
 
     // pause pre-sale
-    await contract.setPublicMintEnable(false);
+    await contract.setPublicMintEnable(1);
 
     // external user trying to mint when the feature is off
     await expect(contract.connect(externalUser).publicMint(
@@ -327,11 +338,11 @@ describe(CollectionConfig.contractName, function () {
       ).to.be.revertedWith("Ownable: caller is not the owner");
     
     await expect(
-        contract.connect(externalUser).setPublicMintEnable(false)
+        contract.connect(externalUser).setPublicMintEnable(1)
     ).to.be.revertedWith("Ownable: caller is not the owner");
           
     await expect(
-        contract.connect(externalUser).setWhitelistMintEnable(false)
+        contract.connect(externalUser).setWhitelistMintEnable(1)
     ).to.be.revertedWith("Ownable: caller is not the owner");
               
     await expect(
@@ -446,8 +457,8 @@ describe(CollectionConfig.contractName, function () {
   it("Withdraw", async function () {
     // witdraw need all feature is off
     await contract.connect(owner).setToogleForRefund(true);
-    await contract.connect(owner).setPublicMintEnable(true);
-    await contract.connect(owner).setWhitelistMintEnable(true);
+    await contract.connect(owner).setPublicMintEnable(2);
+    await contract.connect(owner).setWhitelistMintEnable(2);
     
     await expect(contract.connect(owner).withdraw()).to.be.revertedWith(
         "NeedAllFeaturesOff()"
@@ -459,13 +470,13 @@ describe(CollectionConfig.contractName, function () {
         "NeedAllFeaturesOff()"
     );
 
-    await contract.connect(owner).setPublicMintEnable(false);
+    await contract.connect(owner).setPublicMintEnable(1);
 
     await expect(contract.connect(owner).withdraw()).to.be.revertedWith(
         "NeedAllFeaturesOff()"
     );
 
-    await contract.connect(owner).setWhitelistMintEnable(false);
+    await contract.connect(owner).setWhitelistMintEnable(1);
 
     // success
     await contract.connect(owner).withdraw();
