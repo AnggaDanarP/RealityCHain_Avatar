@@ -1,24 +1,15 @@
-import { utils } from "ethers";
-import CollectionConfig from "../config/CollectionConfig";
 import NftContractProvider from "../lib/NftContractProvider";
+import { BigNumber } from "ethers";
 
 async function main() {
     // attach to deploy contract
     const contract = await NftContractProvider.getContract();
 
-    // get back to normal price (if needed)
-    const normalPrice = utils.parseEther(CollectionConfig.whitelistSale.price.toString());
-    if (!(await contract.cost()).eq(normalPrice)) {
-        console.log(`Updating the token price to ${CollectionConfig.whitelistSale.price} ${CollectionConfig.mainnet.symbol}...`);
-
-        await (await contract.setCost(normalPrice)).wait();
-    }
-
     // disable whitelist sale (if needed)
-    if (await contract.whitelistMintEnable()) {
+    if ((await contract.feature(1)).toggle == BigNumber.from(1)) {
         console.log("Disabling whitelist sale...");
 
-        await (await contract.setWhitelistMintEnabled(false)).wait();
+        await (await contract.setWhitelistMintEnable(1)).wait();
     }
     
     console.log("Whitelist sale has been disabled!");

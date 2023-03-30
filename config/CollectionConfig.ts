@@ -3,6 +3,7 @@ import * as Networks from "../lib/Networks";
 import * as Marketpalce from "../lib/Marketplaces";
 import whitelistAddress from "./whitelist.json";
 import refunder from "./refund.json";
+import airdrops from "./giftMint.json";
 
 const CollectionConfig: CollectionConfigInterface = {
     testnet: Networks.ethereumTestnet,
@@ -14,7 +15,8 @@ const CollectionConfig: CollectionConfigInterface = {
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
     whiteListAddresses: whitelistAddress, // on changes
-    refundAddress: refunder
+    refundAddress: refunder,
+    addressAirdrops: airdrops
 };
 
 export default CollectionConfig;

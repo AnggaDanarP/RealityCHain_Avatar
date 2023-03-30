@@ -10,6 +10,7 @@ export default interface CollectionConfigInterface {
     contractAddress: string|null;
     whiteListAddresses: string[];
     refundAddress: string[];
+    addressAirdrops: string[];
     marketplaceIdentifier: string;
     marketplaceConfig: MarketplaceConfigInterface;
 };

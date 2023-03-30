@@ -1,24 +1,15 @@
-import { utils } from "ethers";
-import CollectionConfig from "../config/CollectionConfig";
+import { BigNumber } from "ethers";
 import NftContractProvider from '../lib/NftContractProvider';
 
 async function main() {
     // Attach to deployed contract
     const contract = await NftContractProvider.getContract();
 
-    // get back to normal price (if needed)
-    const normalPrice = utils.parseEther(CollectionConfig.whitelistSale.price.toString());
-    if (!(await contract.cost()).eq(normalPrice)) {
-        console.log(`Updating the token price to ${CollectionConfig.whitelistSale.price} ${CollectionConfig.mainnet.symbol}...`);
-
-        await (await contract.setCost(normalPrice)).wait();
-    }
-
     // Pause the contract (if needed)
-    if (!await contract.paused()) {
+    if ((await contract.feature(0)).toggle == BigNumber.from(2)) {
         console.log('Pausing the contract...');
 
-        await (await contract.setPaused(true)).wait();
+        await (await contract.setPublicMintEnable(1)).wait();
     }
 
     console.log('Public sale is now closed!');

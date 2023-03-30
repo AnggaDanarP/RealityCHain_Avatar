@@ -3,7 +3,7 @@ import NftContractProviders from "../lib/NftContractProvider";
 async function main() {
     const contract = await NftContractProviders.getContract();
 
-    if(await contract.refundEndToogle()) {
+    if(await contract.refundToggle()) {
         console.log("Close the refund feature...");
 
         await contract.setToogleForRefund(false);

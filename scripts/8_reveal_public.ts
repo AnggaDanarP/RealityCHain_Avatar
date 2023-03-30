@@ -12,7 +12,7 @@ async function main() {
     if ((await contract.uriPrefix()) !== process.env.COLLECTION_URI_PREFIX) {
         console.log(`Updating the URI prefix to ${process.env.COLLECTION_URI_PREFIX}`);
 
-        await (await contract.setUriPrefix(process.env.COLLECTION_URI_PREFIX)).wait();
+        await (await contract.setMetadataBaseUri(process.env.COLLECTION_URI_PREFIX)).wait();
     }
 
     // Revealing the collection (if needed)
