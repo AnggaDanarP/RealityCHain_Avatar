@@ -6,341 +6,225 @@ SPDX-License-Identifier: MIT
 ██      ██      ██   ██ ██    ██ ██    ██ ██          ██    ██ ██          ██    ██ ██    ██ ██   ██ ██   ██ ██   ██ ██ ██   ██ ██  ██ ██      ██ 
 ███████ ███████ ██   ██  ██████   ██████  ███████      ██████  ██           ██████   ██████  ██   ██ ██   ██ ██████  ██ ██   ██ ██   ████ ███████ 
 */
-pragma solidity 0.8.17;
+pragma solidity 0.8.19;
 
-//import "./token/ERC721r.sol";
-import "operator-filter-registry/src/DefaultOperatorFilterer.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "../contracts/token/ERC721r.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+error AddressAlreadyClaimed();
+error MintingPhaseClose();
 error InvalidMintAmount();
-error AmountCannotZero();
-error MaxSupplyExceeded();
+error ExceedeedTokenClaiming();
+error SupplyExceedeed();
+error MaxSupplyExceedeed();
 error InsufficientFunds();
-error ContractAddressCannotMint();
-error AddressWhitelistAlreadyClaimed();
-error PublicDisable();
-error WhitelistSaleDisable();
-error RefundDisable();
-error InvalidProof();
-error NftLimitAddressExceeded();
+error AddressAlreadyClaimOrNotReserve();
 error NeedAllFeaturesOff();
-error WrongInputSupply();
-error SupplyInputAboveLimit();
 error NonExistToken();
-error MintingMoreTokenThanAvailable();
-error NotTokenOwner();
-error TokenAlreadyRefunded();
-error ToggleInputInvalid();
+error TokenLocked();
 
-contract TestingLOG is
-    ERC721Enumerable,
-    ReentrancyGuard,
-    Ownable,
-    DefaultOperatorFilterer
-{
+contract TestingLOG is ERC721r, Ownable {
     using Strings for uint256;
 
-    string public uriPrefix = "";
-    string public hiddenMetadata = "";
-    uint256 private _numAvailableTokens;
-    uint256 public immutable maxSupplyToken;
-    uint256 public constant BATCH_SIZE = 6;
-    bool public refundToggle = false;
-    bool public revealed = false;
+    uint256 private constant MAX_SUPPLY = 5555;
+    uint256 private immutable _timeTokenLock;
+    string private _hiddenMetadata;
+    string private _uriPrefix;
+    bool private _revealed = false;
 
-    struct NftSpec {
-        uint256 supplyLimit;
+    struct PhaseSpec {
+        uint256 supply;
         uint256 cost;
-        uint256 maxMintAmountPerTx;
-        uint256 alreadyMinted;
-        uint256 toggle; // value 1 is false, 2 is true.
+        uint256 maxAmountPerAddress;
+        uint256 minted;
+        uint256 startTime;
+        uint256 endTime;
     }
 
-    enum MintingFeature {
-        publicMinting,
-        whitelistMinting,
-        giftMinting
+    enum PhaseMint {
+        freeMint,
+        reserve,
+        guaranteed,
+        fcfs
     }
 
-    enum VerifyFeature {
-        whitelist,
-        refund
-    }
-
-    mapping(MintingFeature => NftSpec) public feature;
-    mapping(VerifyFeature => bytes32) public merkleRoot;
-    mapping(address => uint256) private _whitelistClaimed; // if the valie is 1, wallet already claim the nft
-    mapping(address => uint256) private _publicClaimNft;
-    mapping(uint256 => uint256) private _hashRefund; // if the valie is 1, tokenId have refund
-    mapping(uint256 => uint256) private _availableTokens;
-
-    event Minting(address to, uint256 tokenId);
-    event Refund(address from, uint256 tokenId, uint256 costToken);
+    mapping(PhaseMint => PhaseSpec) public _feature;
+    mapping(address => mapping(PhaseMint => uint256)) public _addressClaim;
+    mapping(uint256 => bool) private _tokenLocked;
 
     constructor(
-        uint256 _maxSupplyAvailable,
-        string memory _hiddenMetadata
-    ) ERC721("Testing-LOG", "TLOG") {
-        hiddenMetadata = _hiddenMetadata;
-        maxSupplyToken = _maxSupplyAvailable;
-        _numAvailableTokens = _maxSupplyAvailable;
-        feature[MintingFeature.publicMinting] = NftSpec(2000, 0.02 ether, 3, 1, 1);
-        feature[MintingFeature.whitelistMinting] = NftSpec(1000, 0.015 ether, 1, 1, 1);
-        feature[MintingFeature.giftMinting] = NftSpec(200, 0, 200, 1, 2);
-        merkleRoot[VerifyFeature.whitelist] = 0;
-        merkleRoot[VerifyFeature.refund] = 0;
+        string memory _hiddenMetadataUri,
+        uint256 _timeTokenLocked
+    ) ERC721r("Testing-LOG", "TLOG", MAX_SUPPLY) {
+        _hiddenMetadata = _hiddenMetadataUri;
+        _timeTokenLock = _timeTokenLocked;
+
+        _feature[PhaseMint.freeMint] = PhaseSpec({
+            supply: 333,
+            cost: 0 ether,
+            maxAmountPerAddress: 1,
+            startTime: 0,
+            endTime: _feature[PhaseMint.freeMint].startTime + 12 hours,
+            minted: 1
+        });
+
+        _feature[PhaseMint.reserve] = PhaseSpec({
+            supply: 1500,
+            cost: 0.024 ether,
+            maxAmountPerAddress: 2,
+            startTime: _feature[PhaseMint.freeMint].endTime,
+            endTime: _feature[PhaseMint.reserve].startTime + 2 hours,
+            minted: 1
+        });
+
+        _feature[PhaseMint.guaranteed] = PhaseSpec({
+            supply: 3000,
+            cost: 0.024 ether,
+            maxAmountPerAddress: 2,
+            startTime: _feature[PhaseMint.reserve].endTime,
+            endTime: _feature[PhaseMint.guaranteed].startTime + 2 hours,
+            minted: 1
+        });
+
+        _feature[PhaseMint.fcfs] = PhaseSpec({
+            supply: _supplyLeft(),
+            cost: 0.034 ether,
+            maxAmountPerAddress: 2,
+            startTime: 0,
+            endTime: _feature[PhaseMint.guaranteed].startTime + 2 hours,
+            minted: 1
+        });
     }
 
-    function _isOnList(
-        address _minter,
-        bytes32[] calldata _merkleProof,
-        bytes32 _merkleRoot
-    ) private pure returns (bool) {
-        bytes32 _leafe = keccak256(abi.encodePacked((_minter)));
-        return MerkleProof.verify(_merkleProof, _merkleRoot, _leafe);
-    }
-
-    function checkSupplyAndCost(
-        MintingFeature mintingFeature,
-        uint256 _mintingAmount
-    ) private returns (bool) {
-        uint256 _cost = feature[mintingFeature].cost;
-        uint256 _alreadyMinted = feature[mintingFeature].alreadyMinted;
-
-        if (_mintingAmount == 0) {
-            revert AmountCannotZero();
-        }
-        if (_mintingAmount > feature[mintingFeature].maxMintAmountPerTx) {
+    // ===================================================================
+    //                            MODIFIER
+    // ===================================================================
+    modifier mintCompliance(PhaseMint _phase, uint256 _mintAmount) {
+        _checkDuration(_phase);
+        if (
+            _mintAmount < 0 &&
+            _mintAmount > _feature[_phase].maxAmountPerAddress
+        ) {
             revert InvalidMintAmount();
         }
-        if (totalSupply() + _mintingAmount > maxSupplyToken) {
-            revert MaxSupplyExceeded();
-        }
-        if (msg.value < _cost * _mintingAmount) {
-            revert InsufficientFunds();
+        if (
+            _addressClaim[msg.sender][_phase] ==
+            _feature[_phase].maxAmountPerAddress
+        ) {
+            revert AddressAlreadyClaimed();
         }
         if (
-            (_alreadyMinted + _mintingAmount) - 1 >
-            feature[mintingFeature].supplyLimit
+            _addressClaim[msg.sender][_phase] + _mintAmount >
+            _feature[_phase].maxAmountPerAddress
         ) {
-            revert MaxSupplyExceeded();
+            revert ExceedeedTokenClaiming();
         }
-        return true;
+        if (
+            (_feature[_phase].minted + _mintAmount) - 1 >
+            _feature[_phase].supply
+        ) {
+            revert SupplyExceedeed();
+        }
+        if (msg.value < _mintAmount * _feature[_phase].cost) {
+            revert InsufficientFunds();
+        }
+        _addressClaim[msg.sender][_phase] += _mintAmount;
+        _feature[_phase].minted += _mintAmount;
+        _;
     }
 
-    function checkMaxLimitSupply(
-        MintingFeature feature2Change,
-        uint256 _newSupply,
-        MintingFeature featureOne,
-        MintingFeature featureTwo
-    ) private view returns (bool) {
-        uint256 available = availabelSupply(featureOne, featureTwo);
-
-        if (_newSupply == 0) revert AmountCannotZero();
-        if (_newSupply < feature[feature2Change].alreadyMinted) {
-            revert WrongInputSupply();
+    modifier IsTransferAllowed(uint256 _tokenId) {
+        if (_tokenLocked[_tokenId] && block.timestamp < _timeTokenLock) {
+            revert TokenLocked();
         }
-        if (_newSupply > available) revert SupplyInputAboveLimit();
-        return true;
+        _;
     }
 
-    function availabelSupply(
-        MintingFeature featureOne,
-        MintingFeature featureTwo
-    ) private view returns (uint256) {
-        uint256 _maxLimitWhitelist = feature[featureOne].supplyLimit;
-        uint256 _maxLimitGift = feature[featureTwo].supplyLimit;
-        uint256 _maxSupplyToken = maxSupplyToken;
-        return _maxSupplyToken - (_maxLimitWhitelist + _maxLimitGift);
-    }
-
-    function getCostToken() private view returns (uint256) {
-        if (feature[MintingFeature.whitelistMinting].toggle == 2) {
-            return feature[MintingFeature.whitelistMinting].cost;
-        }
-
-        if (feature[MintingFeature.publicMinting].toggle == 2) {
-            return feature[MintingFeature.publicMinting].cost;
-        }
-
-        return 0;
-    }
-
-    function getRandomAvailableTokenId(
-        address to,
-        uint256 updatedNumAvailableTokens
-    ) private returns (uint256) {
-        uint256 randomNum = uint256(
-            keccak256(
-                abi.encode(
-                    to,
-                    tx.gasprice,
-                    block.number,
-                    block.timestamp,
-                    block.difficulty,
-                    blockhash(block.number - 1),
-                    address(this),
-                    updatedNumAvailableTokens
-                )
-            )
-        );
-        uint256 randomIndex = randomNum % updatedNumAvailableTokens;
-        return getAvailableTokenAtIndex(randomIndex, updatedNumAvailableTokens);
-    }
-
-    function getAvailableTokenAtIndex(
-        uint256 indexToUse,
-        uint256 updatedNumAvailableTokens
-    ) private returns (uint256) {
-        uint256 valAtIndex = _availableTokens[indexToUse];
-        uint256 result;
-        if (valAtIndex == 0) {
-            // This means the index itself is still an available token
-            result = indexToUse;
-        } else {
-            // This means the index itself is not an available token, but the val at that index is.
-            result = valAtIndex;
-        }
-
-        uint256 lastIndex = updatedNumAvailableTokens - 1;
-        uint256 lastValInArray = _availableTokens[lastIndex];
-        if (indexToUse != lastIndex) {
-            // Replace the value at indexToUse, now that it's been used.
-            // Replace it with the data from the last index in the array, since we are going to decrease the array size afterwards.
-            if (lastValInArray == 0) {
-                // This means the index itself is still an available token
-                _availableTokens[indexToUse] = lastIndex;
-            } else {
-                // This means the index itself is not an available token, but the val at that index is.
-                _availableTokens[indexToUse] = lastValInArray;
-            }
-        }
-        if (lastValInArray != 0) {
-            // Gas refund courtsey of @dievardump
-            delete _availableTokens[lastIndex];
-        }
-
-        return result;
-    }
-
-    function _minting(
-        MintingFeature mintingFeature,
-        uint256 _mintAmount,
-        address _to
-    ) private nonReentrant {
-        uint256 updatedNumAvailableTokens = _numAvailableTokens;
-
-        if (Address.isContract(_to)) {
-            revert ContractAddressCannotMint();
-        }
-        if (updatedNumAvailableTokens < _mintAmount)
-            revert MintingMoreTokenThanAvailable();
-
-        for (uint256 i; i < _mintAmount; ++i) {
-            // Do this ++ unchecked?
-            uint256 tokenId = getRandomAvailableTokenId(_to, updatedNumAvailableTokens);
-
-            _mint(_to, tokenId);
-
-            unchecked {
-                --updatedNumAvailableTokens;
-            }
-
-            emit Minting(_to, tokenId);
-        }
-
-        _numAvailableTokens = updatedNumAvailableTokens;
-
-        unchecked {
-            feature[mintingFeature].alreadyMinted += _mintAmount;
+    function _checkDuration(PhaseMint _phase) internal view virtual {
+        if (
+            block.timestamp < _feature[_phase].startTime &&
+            block.timestamp > _feature[_phase].endTime
+        ) {
+            revert MintingPhaseClose();
         }
     }
 
-    function whitelistMint(bytes32[] calldata _merkleProof) external payable {
-        bytes32 _merkleRootWhitelist = merkleRoot[VerifyFeature.whitelist];
-
-        if (feature[MintingFeature.whitelistMinting].toggle != 2) {
-            revert WhitelistSaleDisable();
-        }
-
-        if (!_isOnList(_msgSender(), _merkleProof, _merkleRootWhitelist)) {
-            revert InvalidProof();
-        }
-
-        if (_whitelistClaimed[_msgSender()] == 1) {
-            revert AddressWhitelistAlreadyClaimed();
-        }
-
-        if (checkSupplyAndCost(MintingFeature.whitelistMinting, 1)) {
-            _minting(MintingFeature.whitelistMinting, 1, _msgSender());
-            unchecked {
-                _whitelistClaimed[_msgSender()]++;
-            }
-        }
+    function _supplyLeft() private view returns (uint256) {
+        uint256 mintedPhase1 = _feature[PhaseMint.freeMint].minted;
+        uint256 mintedPhase2 = _feature[PhaseMint.reserve].minted;
+        uint256 mintedPhase3 = _feature[PhaseMint.guaranteed].minted;
+        return MAX_SUPPLY - (mintedPhase1 + mintedPhase2 + mintedPhase3);
     }
 
-    function publicMint(uint256 _mintAmount) external payable {
-        if (feature[MintingFeature.publicMinting].toggle != 2) {
-            revert PublicDisable();
-        }
-
-        if ((_publicClaimNft[_msgSender()] + _mintAmount) > BATCH_SIZE) {
-            revert NftLimitAddressExceeded();
-        }
-
-        if (checkSupplyAndCost(MintingFeature.publicMinting, _mintAmount)) {
-            _publicClaimNft[_msgSender()] += _mintAmount;
-            _minting(MintingFeature.publicMinting, _mintAmount, _msgSender());
-        }
+    // ===================================================================
+    //                                MINT
+    // ===================================================================
+    function freeMinting()
+        external
+        payable
+        mintCompliance(PhaseMint.freeMint, 1)
+    {
+        uint256 _tokenId = getRandomIndex(msg.sender);
+        _tokenLocked[_tokenId] = true;
+        _mintAtIndex(msg.sender, _tokenId);
     }
 
-    function giftMint(address[] calldata _receiver) external onlyOwner {
-        uint256 _amount = _receiver.length;
-        if (checkSupplyAndCost(MintingFeature.giftMinting, _amount)) {
-            for (uint256 i = 0; i < _amount; i++) {
-                _minting(MintingFeature.giftMinting, 1, _receiver[i]);
-            }
-        }
+    function reserve(
+        uint256 amountReserve
+    ) external payable mintCompliance(PhaseMint.reserve, amountReserve) {}
+
+    function mint(
+        PhaseMint phaseMint,
+        uint256 amountMint
+    ) external payable mintCompliance(phaseMint, amountMint) {
+        _mintRandom(msg.sender, amountMint);
     }
 
-    function refund(
-        uint256 tokenId,
-        bytes32[] calldata _merkleProof
-    ) external nonReentrant {
-        bytes32 _merkleRootRefund = merkleRoot[VerifyFeature.refund];
+    function claimReserve() external {
+        _checkDuration(PhaseMint.fcfs);
+        uint256 _tokenReserve = _addressClaim[msg.sender][PhaseMint.reserve];
+        if (_tokenReserve == 0) revert AddressAlreadyClaimOrNotReserve();
+        _addressClaim[msg.sender][PhaseMint.reserve] = 0;
+        _mintRandom(msg.sender, _tokenReserve);
+    }
 
-        if (!refundToggle) {
-            revert RefundDisable();
-        }
+    function devClaim(uint256 mintAmount) external onlyOwner {
+        _mintRandom(msg.sender, mintAmount);
+    }
 
-        if (!_isOnList(_msgSender(), _merkleProof, _merkleRootRefund)) {
-            revert InvalidProof();
-        }
-        if (!_exists(tokenId)) revert NonExistToken();
-        if (_msgSender() != ownerOf(tokenId)) revert NotTokenOwner();
-        if (_hashRefund[tokenId] == 1) revert TokenAlreadyRefunded();
+    // ===================================================================
+    //                          OWNER FUNCTION
+    // ===================================================================
+    function startMintingPhase(uint256 timeStart) external onlyOwner {
+        _feature[PhaseMint.freeMint].startTime = timeStart;
+    }
 
-        uint256 priceToReturn = getCostToken();
+    function startMintingPublic(uint256 timeStart) external onlyOwner {
+        _feature[PhaseMint.fcfs].startTime = timeStart;
+    }
 
-        unchecked {
-            _hashRefund[tokenId]++;
-        }
-        
-        transferFrom(msg.sender, owner(), tokenId);
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _uriPrefix;
+    }
 
-        Address.sendValue(payable(_msgSender()), priceToReturn);
+    function setHiddenMetadata(
+        string memory _hiddenMetadataUri
+    ) external onlyOwner {
+        _hiddenMetadata = _hiddenMetadataUri;
+    }
 
-        emit Refund(_msgSender(), tokenId, priceToReturn);
+    function setBaseUri(string memory _newUriPrefix) external onlyOwner {
+        _uriPrefix = _newUriPrefix;
+    }
+
+    function setRevealed(bool _state) external onlyOwner {
+        _revealed = _state;
     }
 
     function withdraw() external onlyOwner {
         if (
-            refundToggle ||
-            feature[MintingFeature.whitelistMinting].toggle == 2 ||
-            feature[MintingFeature.publicMinting].toggle == 2
+            block.timestamp > _feature[PhaseMint.freeMint].endTime &&
+            block.timestamp > _feature[PhaseMint.fcfs].endTime
         ) {
             revert NeedAllFeaturesOff();
         }
@@ -352,12 +236,15 @@ contract TestingLOG is
         );
     }
 
+    // ===================================================================
+    //                           OPENSEA SUPPORT
+    // ===================================================================
     function tokenURI(
         uint256 _tokenId
     ) public view virtual override returns (string memory) {
         if (!_exists(_tokenId)) revert NonExistToken();
-        if(!revealed) return hiddenMetadata;
-        string memory currentBaseURI =  _baseURI();
+        if (!_revealed) return _hiddenMetadata;
+        string memory currentBaseURI = _baseURI();
         return
             bytes(currentBaseURI).length > 0
                 ? string(
@@ -370,141 +257,11 @@ contract TestingLOG is
                 : "";
     }
 
-    function _baseURI() internal view virtual override returns (string memory) {
-        return uriPrefix;
-    }
-
-    function setHiddenMetadata(
-        string memory _hiddenMetadataUri
-    ) external onlyOwner {
-        hiddenMetadata = _hiddenMetadataUri;
-    }
-
-    function setMetadataBaseUri(string memory _uriPrefix) external onlyOwner {
-        uriPrefix = _uriPrefix;
-    }
-
-    function setRevealed(bool _state) external onlyOwner {
-        revealed = _state;
-    }
-
-    function setMaxMintAmountPerTxPublic(
-        uint256 _maxMintAmountPerTx
-    ) external onlyOwner {
-        feature[MintingFeature.publicMinting]
-            .maxMintAmountPerTx = _maxMintAmountPerTx;
-    }
-
-    function setCostPublic(uint256 _cost) external onlyOwner {
-        feature[MintingFeature.publicMinting].cost = _cost;
-    }
-
-    function setCostWhitelist(uint256 _cost) external onlyOwner {
-        feature[MintingFeature.whitelistMinting].cost = _cost;
-    }
-
-    function setMerkleRootWhitelist(bytes32 _merkleRoot) external onlyOwner {
-        merkleRoot[VerifyFeature.whitelist] = _merkleRoot;
-    }
-
-    function setMerkleRootRefund(bytes32 _merkleRoot) external onlyOwner {
-        merkleRoot[VerifyFeature.refund] = _merkleRoot;
-    }
-
-    function setMaxSupplyPublic(uint256 _newSupply) external onlyOwner {
-        if (
-            checkMaxLimitSupply(
-                MintingFeature.publicMinting,
-                _newSupply,
-                MintingFeature.whitelistMinting,
-                MintingFeature.giftMinting
-            )
-        ) {
-            feature[MintingFeature.publicMinting].supplyLimit = _newSupply;
-        }
-    }
-
-    function setMaxSupplyWhitelist(uint256 _newSupply) external onlyOwner {
-        if (
-            checkMaxLimitSupply(
-                MintingFeature.whitelistMinting,
-                _newSupply,
-                MintingFeature.publicMinting,
-                MintingFeature.giftMinting
-            )
-        ) {
-            feature[MintingFeature.whitelistMinting].supplyLimit = _newSupply;
-        }
-    }
-
-    function setMaxSupplyGift(uint256 _newSupply) external onlyOwner {
-        if (
-            checkMaxLimitSupply(
-                MintingFeature.giftMinting,
-                _newSupply,
-                MintingFeature.whitelistMinting,
-                MintingFeature.publicMinting
-            )
-        ) {
-            feature[MintingFeature.giftMinting].supplyLimit = _newSupply;
-        }
-    }
-
-    function setPublicMintEnable(uint256 toggle) external onlyOwner {
-        if (toggle < 1 || toggle > 2) {
-            revert ToggleInputInvalid();
-        }
-        feature[MintingFeature.publicMinting].toggle = toggle;
-    }
-
-    function setWhitelistMintEnable(uint256 toggle) external onlyOwner {
-        if (toggle < 1 || toggle > 2) {
-            revert ToggleInputInvalid();
-        }
-        feature[MintingFeature.whitelistMinting].toggle = toggle;
-    }
-
-    function setToogleForRefund(bool _refundEndToogle) external onlyOwner {
-        refundToggle = _refundEndToogle;
-    }
-
-    /**
-     * ===================================================
-     *                       Override
-     * ===================================================
-     */
-    function setApprovalForAll(
-        address operator,
-        bool approved
-    ) public override(ERC721, IERC721) onlyAllowedOperatorApproval(operator) {
-        super.setApprovalForAll(operator, approved);
-    }
-
-    function approve(
-        address operator,
-        uint256 tokenId
-    )
-        public
-        override(ERC721, IERC721)
-        //payable
-        onlyAllowedOperatorApproval(operator)
-    {
-        super.approve(operator, tokenId);
-    }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public override(ERC721, IERC721) onlyAllowedOperator(from) {
-        super.transferFrom(from, to, tokenId);
-    }
-
     function safeTransferFrom(
         address from,
         address to,
         uint256 tokenId
-    ) public override(ERC721, IERC721) onlyAllowedOperator(from) {
+    ) public override(ERC721r) IsTransferAllowed(tokenId) {
         super.safeTransferFrom(from, to, tokenId);
     }
 
@@ -513,7 +270,23 @@ contract TestingLOG is
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public override(ERC721, IERC721) onlyAllowedOperator(from) {
+    ) public override(ERC721r) IsTransferAllowed(tokenId) {
         super.safeTransferFrom(from, to, tokenId, data);
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public override(ERC721r) IsTransferAllowed(tokenId) {
+        super.safeTransferFrom(from, to, tokenId);
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override(ERC721r) {
+        super._beforeTokenTransfer(from, to, tokenId);
     }
 }

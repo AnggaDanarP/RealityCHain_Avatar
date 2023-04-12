@@ -7,7 +7,12 @@
         {
             "type": "solidity",
             "request": "launch",
-            "name": "Debug Solidity"
+            "name": "Debug Solidity (via contract entry point)"
+        },
+        {
+            "type": "solidityMeadow",
+            "request": "launch",
+            "name": "Debug Solidity (via unit test run)"
         }
     ]
 }

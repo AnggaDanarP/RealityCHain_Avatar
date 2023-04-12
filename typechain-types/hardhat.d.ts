@@ -17,18 +17,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Ownable__factory>;
     getContractFactory(
-      name: "ERC721",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ERC721__factory>;
-    getContractFactory(
-      name: "ERC721Enumerable",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ERC721Enumerable__factory>;
-    getContractFactory(
-      name: "IERC721Enumerable",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC721Enumerable__factory>;
-    getContractFactory(
       name: "IERC721Metadata",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC721Metadata__factory>;
@@ -56,59 +44,12 @@ declare module "hardhat/types/runtime" {
       name: "ERC721r",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ERC721r__factory>;
-    getContractFactory(
-      name: "ERC721A__IERC721Receiver",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ERC721A__IERC721Receiver__factory>;
-    getContractFactory(
-      name: "ERC721A",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ERC721A__factory>;
-    getContractFactory(
-      name: "ERC721AQueryable",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ERC721AQueryable__factory>;
-    getContractFactory(
-      name: "IERC721AQueryable",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC721AQueryable__factory>;
-    getContractFactory(
-      name: "IERC721A",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC721A__factory>;
-    getContractFactory(
-      name: "DefaultOperatorFilterer",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.DefaultOperatorFilterer__factory>;
-    getContractFactory(
-      name: "IOperatorFilterRegistry",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IOperatorFilterRegistry__factory>;
-    getContractFactory(
-      name: "OperatorFilterer",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.OperatorFilterer__factory>;
 
     getContractAt(
       name: "Ownable",
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.Ownable>;
-    getContractAt(
-      name: "ERC721",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.ERC721>;
-    getContractAt(
-      name: "ERC721Enumerable",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.ERC721Enumerable>;
-    getContractAt(
-      name: "IERC721Enumerable",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IERC721Enumerable>;
     getContractAt(
       name: "IERC721Metadata",
       address: string,
@@ -144,46 +85,6 @@ declare module "hardhat/types/runtime" {
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.ERC721r>;
-    getContractAt(
-      name: "ERC721A__IERC721Receiver",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.ERC721A__IERC721Receiver>;
-    getContractAt(
-      name: "ERC721A",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.ERC721A>;
-    getContractAt(
-      name: "ERC721AQueryable",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.ERC721AQueryable>;
-    getContractAt(
-      name: "IERC721AQueryable",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IERC721AQueryable>;
-    getContractAt(
-      name: "IERC721A",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IERC721A>;
-    getContractAt(
-      name: "DefaultOperatorFilterer",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.DefaultOperatorFilterer>;
-    getContractAt(
-      name: "IOperatorFilterRegistry",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IOperatorFilterRegistry>;
-    getContractAt(
-      name: "OperatorFilterer",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.OperatorFilterer>;
 
     // default types
     getContractFactory(

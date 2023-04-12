@@ -55,7 +55,7 @@ describe(CollectionConfig.contractName, function () {
   let contract!: NftContractType;
   let costWhitelist!: BigNumber;
   let costPublic!: BigNumber;
-  //const maxSupply = 5555;
+  let tokenMinting = [];
 
   before(async function () {
     [owner, whitelistedUser, holder, externalUser] = await ethers.getSigners();
@@ -397,6 +397,36 @@ describe(CollectionConfig.contractName, function () {
     // return the value to 2000
     await contract.connect(owner).setMaxSupplyPublic(2000);
     
+  });
+
+  it("Token URI generation", async function () {
+    // update again
+    const genesis = await contract.hiddenMetadata();
+    const uriPrefix = "ipfs://QmPheZWCLHygMQLQiRVmAWD4YZBcgLndC1V3ZGVW8AECkW/";
+    const uriSuffix = ".json";
+    const tokenId = testForRefundToken.toNumber();
+
+    for (let i =  0; i < CollectionConfig.maxSupply; i++) {
+      if (await contract.)
+    }
+
+    expect(await contract.tokenURI(tokenId)).to.equal(
+      `${genesis}tokenId${uriSuffix}`
+    );
+
+    // Reveal collection
+    await contract.setUriPrefix(uriPrefix);
+    await contract.setRevealed(true);
+
+    // ERC721A uses token IDs starting from 0 internally...
+    await expect(contract.tokenURI(0)).to.be.revertedWith(
+      "URI query for nonexistent token"
+    );
+
+    // Testing first and last minted tokens
+    expect(await contract.tokenURI(tokenId)).to.equal(
+      `${uriPrefix}tokenId${uriSuffix}`
+    );
   });
 
   // it("Refund", async function () {

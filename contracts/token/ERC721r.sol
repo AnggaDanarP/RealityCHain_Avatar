@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -286,6 +286,25 @@ contract ERC721r is Context, ERC165, IERC721, IERC721Metadata {
         _numAvailableTokens = updatedNumAvailableTokens;
         _balances[to] += _numToMint;
     }
+
+    function getRandomIndex(address to) internal view returns (uint256) {
+        uint256 _updatedNumAvailableTokens = _numAvailableTokens - totalSupply();
+        uint256 randomNum = uint256(
+            keccak256(
+                abi.encode(
+                    to,
+                    tx.gasprice,
+                    block.number,
+                    block.timestamp,
+                    block.prevrandao,
+                    blockhash(block.number - 1),
+                    address(this),
+                    _updatedNumAvailableTokens
+                )
+            )
+        );
+        return randomNum % _updatedNumAvailableTokens;
+    }
         
     function getRandomAvailableTokenId(address to, uint updatedNumAvailableTokens)
         internal
@@ -298,7 +317,7 @@ contract ERC721r is Context, ERC165, IERC721, IERC721Metadata {
                     tx.gasprice,
                     block.number,
                     block.timestamp,
-                    block.difficulty,
+                    block.prevrandao,
                     blockhash(block.number - 1),
                     address(this),
                     updatedNumAvailableTokens
