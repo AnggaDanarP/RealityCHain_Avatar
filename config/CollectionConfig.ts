@@ -5,12 +5,17 @@ import whitelistAddress from "./whitelist.json";
 import refunder from "./refund.json";
 import airdrops from "./giftMint.json";
 
+function getTimestampForFutureDate(daysToAdd: number): number {
+    const timestamp = daysToAdd * 24 * 60 * 60;
+    return timestamp;
+  }
+
 const CollectionConfig: CollectionConfigInterface = {
     testnet: Networks.ethereumTestnet,
     mainnet: Networks.ethereumMainnet,
     contractName: "TestingLOG",
-    maxSupply: 5555,
-    hiddenMetadata: "ipfs://QmdsoAhzoLeiTfsd518WGgVBYV6Ld9BfrrRnTh4orLjHfG/",
+    durationLockToken: getTimestampForFutureDate(7),
+    hiddenMetadata: "ipfs://QmdsoAhzoLeiTfsd518WGgVBYV6Ld9BfrrRnTh4orLjHfG/hidden.json",
     contractAddress: "0x1Db90392e07F591A989408114229f166710472c0",
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,

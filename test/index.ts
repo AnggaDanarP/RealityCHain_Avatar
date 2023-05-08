@@ -1,9 +1,9 @@
 import chai, { expect } from "chai";
 import ChaiAsPromised from "chai-as-promised";
 import { BigNumber, utils } from "ethers";
-import { ethers } from "hardhat";
-import { MerkleTree } from "merkletreejs";
-import keccak256 from "keccak256";
+import { ethers, network } from "hardhat";
+// import { MerkleTree } from "merkletreejs";
+// import keccak256 from "keccak256";
 import CollectionConfig from "../config/CollectionConfig";
 import ContractArguments from "../config/ContractArguments";
 import { NftContractType } from "../lib/NftContractProvider";
@@ -16,49 +16,55 @@ chai.use(ChaiAsPromised);
 //   PUBLIC_SALE = CollectionConfig.publicSale.price,
 // }
 
-const whitelistAddresses = [
-  "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-  "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
-  "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
-  "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
-  "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
-  "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
-  "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720",
-  "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
-  "0x71bE63f3384f5fb98995898A86B02Fb2426c5788",
-  "0xFABB0ac9d68B0B445fB7357272Ff202C5651694a",
-  "0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec",
-  "0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097",
-  "0xcd3B766CCDd6AE721141F452C550Ca635964ce71",
-  "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
-  "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E",
-  "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
-  "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-];
+// const whitelistAddresses = [
+//   "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+//   "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+//   "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+//   "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+//   "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+//   "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+//   "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720",
+//   "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
+//   "0x71bE63f3384f5fb98995898A86B02Fb2426c5788",
+//   "0xFABB0ac9d68B0B445fB7357272Ff202C5651694a",
+//   "0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec",
+//   "0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097",
+//   "0xcd3B766CCDd6AE721141F452C550Ca635964ce71",
+//   "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
+//   "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E",
+//   "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
+//   "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+// ];
 
-// function getPrice(saleType: SaleType, mintAmount: number) {
-//   return utils.parseEther(saleType.toString()).mul(mintAmount);
-// }
+function getPrice(price: string, mintAmount: number) {
+  return utils.parseEther(price).mul(mintAmount);
+}
 
 const gassfee = {
   gasPrice: utils.parseUnits("100", "gwei"),
   gasLimit: 1000000,
 };
 
-let testForRefundToken = BigNumber.from(0);
-
 describe(CollectionConfig.contractName, function () {
-  let owner!: SignerWithAddress;
-  let whitelistedUser!: SignerWithAddress;
-  let holder!: SignerWithAddress;
-  let externalUser!: SignerWithAddress;
   let contract!: NftContractType;
-  let costWhitelist!: BigNumber;
-  let costPublic!: BigNumber;
-  let tokenMinting = [];
+  let owner!: SignerWithAddress;
+  let LogHolder1!: SignerWithAddress;
+  let LogHolder2!: SignerWithAddress;
+  let LogHolder3!: SignerWithAddress;
+  let LogHolder4!: SignerWithAddress;
+  let LogHolder5!: SignerWithAddress;
+  let tokenLocked: number;
+  let tokenUnlocked: number;
 
   before(async function () {
-    [owner, whitelistedUser, holder, externalUser] = await ethers.getSigners();
+    [
+      owner,
+      LogHolder1,
+      LogHolder2,
+      LogHolder3,
+      LogHolder4,
+      LogHolder5
+    ] = await ethers.getSigners();
   });
 
   it("Contract deployment", async function () {
@@ -68,366 +74,593 @@ describe(CollectionConfig.contractName, function () {
     );
     contract = (await Contract.deploy(...ContractArguments)) as NftContractType;
 
-    costWhitelist = (await contract.feature(1)).cost;
-    costPublic = (await contract.feature(0)).cost;
-
     await contract.deployed(), gassfee;
   });
 
   it("Check initial data", async function () {
     expect(await contract.name()).to.equal("Testing-LOG");
     expect(await contract.symbol()).to.equal("TLOG");
-    expect(await contract.hiddenMetadata()).to.equal(
-      CollectionConfig.hiddenMetadata
-    );
-    expect(await contract.uriPrefix()).to.equal("");
-    expect(await contract.maxSupplyToken()).to.equal(5555);
-    expect(await contract.BATCH_SIZE()).to.equal(6);
-    expect(await contract.revealed()).to.equal(false);
 
-    // chack for public mint feature
-    let costPublic = 0.02;
-    expect((await contract.feature(0)).cost).to.equal(
-      utils.parseEther(costPublic.toString())
-    );
-    expect((await contract.feature(0)).supplyLimit).to.equal(2000);
-    expect((await contract.feature(0)).maxMintAmountPerTx).to.equal(3);
-    expect((await contract.feature(0)).alreadyMinted).to.equal(1);
-    expect((await contract.feature(0)).toggle).to.equal(1);
+    // free mint phase
+    expect((await contract.feature(0)).supply).to.equal(333);
+    expect((await contract.feature(0)).cost).to.equal(utils.parseEther("0"));
+    expect((await contract.feature(0)).maxAmountPerAddress).to.equal(1);
+    expect((await contract.feature(0)).startTime).to.equal(1);
+    expect((await contract.feature(0)).endTime).to.equal(1);
+    expect((await contract.feature(0)).minted).to.equal(1);
 
-    // chack for whitelist mint feature
-    let costWhitelist = 0.015;
+    // reserve phase
+    expect((await contract.feature(1)).supply).to.equal(1500);
     expect((await contract.feature(1)).cost).to.equal(
-      utils.parseEther(costWhitelist.toString())
+      utils.parseEther("0.024")
     );
-    expect((await contract.feature(1)).supplyLimit).to.equal(1000);
-    expect((await contract.feature(1)).maxMintAmountPerTx).to.equal(1);
-    expect((await contract.feature(1)).alreadyMinted).to.equal(1);
-    expect((await contract.feature(1)).toggle).to.equal(1);
+    expect((await contract.feature(1)).maxAmountPerAddress).to.equal(2);
+    expect((await contract.feature(1)).startTime).to.equal(1);
+    expect((await contract.feature(1)).endTime).to.equal(1);
+    expect((await contract.feature(1)).minted).to.equal(1);
 
-    // chack for gift mint feature
-    let costGift = 0;
+    // guaranteed phase
+    expect((await contract.feature(2)).supply).to.equal(3000);
     expect((await contract.feature(2)).cost).to.equal(
-      utils.parseEther(costGift.toString())
+      utils.parseEther("0.024")
     );
-    expect((await contract.feature(2)).supplyLimit).to.equal(200);
-    expect((await contract.feature(2)).maxMintAmountPerTx).to.equal(200);
-    expect((await contract.feature(2)).alreadyMinted).to.equal(1);
-    expect((await contract.feature(2)).toggle).to.equal(2);
+    expect((await contract.feature(2)).maxAmountPerAddress).to.equal(2);
+    expect((await contract.feature(2)).startTime).to.equal(1);
+    expect((await contract.feature(2)).endTime).to.equal(1);
+    expect((await contract.feature(2)).minted).to.equal(1);
 
-    await expect(contract.tokenURI(1)).to.be.revertedWith("NonExistToken()");
+    // fcfs phase
+    expect((await contract.feature(3)).supply).to.equal(1);
+    expect((await contract.feature(3)).cost).to.equal(
+      utils.parseEther("0.034")
+    );
+    expect((await contract.feature(3)).maxAmountPerAddress).to.equal(2);
+    expect((await contract.feature(3)).startTime).to.equal(1);
+    expect((await contract.feature(3)).endTime).to.equal(1);
+    expect((await contract.feature(3)).minted).to.equal(1);
+
+    expect(await contract.totalSupply()).to.be.equal(0);
+    expect(await contract.balanceOf(await owner.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder1.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder2.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder3.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder4.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder5.getAddress())).to.equal(0);
+
+    const randomInt = Math.floor(Math.random() * (5555 - 1 + 1)) + 1;
+    await expect(contract.tokenURI(randomInt)).to.be.revertedWith(
+      "NonExistToken()"
+    );
+
+    // keep tracking that there is no token ID = 0
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
   });
 
   it("Before any else", async function () {
     // nobody should be able to mint from paused contract
     await expect(
-      contract.connect(whitelistedUser).publicMint(1, { value: costWhitelist })
-    ).to.be.revertedWith("PublicDisable()");
+      contract.connect(LogHolder1).freeMinting({ value: getPrice("0", 1) })
+    ).to.be.revertedWith("ContractIsPause()");
 
     await expect(
-      contract.connect(whitelistedUser).whitelistMint([], { value: costWhitelist })
-    ).to.be.revertedWith("WhitelistSaleDisable()");
+      contract.connect(LogHolder1).reserve(2, { value: getPrice("0", 1) })
+    ).to.be.revertedWith("ContractIsPause()");
 
-    await expect(contract.connect(owner).withdraw()).to.be.revertedWith("InsufficientFunds()");
+    await expect(
+      contract.connect(LogHolder1).mintPhase(2, 2, { value: getPrice("0", 1) })
+    ).to.be.revertedWith("ContractIsPause()");
+
+    await expect(
+      contract.connect(LogHolder1).mintPhase(3, 2, { value: getPrice("0", 1) })
+    ).to.be.revertedWith("ContractIsPause()");
+
+    await expect(
+      contract.connect(LogHolder1).claimReserve()
+    ).to.be.revertedWith("ContractIsPause()");
+
+    await expect(
+      contract.connect(LogHolder1).mintPublic(2, { value: getPrice("0.35", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(contract.withdraw()).to.be.revertedWith("InsufficientFunds()");
 
     // the owner should always be able to run mintAddress
-    await (await contract.giftMint([await owner.getAddress()])).wait(),
-      { gasPrice: utils.parseUnits("100", "gwei"), gasLimit: 1000000 };
-    await (
-      await contract.giftMint([await whitelistedUser.getAddress()])
-    ).wait(),
-      { gasPrice: utils.parseUnits("100", "gwei"), gasLimit: 1000000 };
-    // But not over the maxMintAmountPerTx
-    // const restOfSupplyGift = [(await contract.MAX_SUPPLY_GIFT()).sub(await contract.giftMinted()).add(1)] as [BigNumber];
-    // await expect(contract.giftMint(
-    //   restOfSupplyGift,
-    //   [await holder.getAddress()],
-    // )).to.be.revertedWith('Max gift supply exceeded!');
+    await contract.airdrops(3, await owner.getAddress(), 1);
+    // collect token unlocked from holder
+    for (let i = 1; i <= 5555; i++) {
+      if(await contract.exists(i)) {
+        if ((await contract.ownerOf(i)) == (await owner.getAddress())) {
+          tokenUnlocked = i;
+          break;
+        }
+      }
+    }
+
+    expect(await contract.totalSupply()).to.be.equal(1);
 
     // check balance
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
-    expect(
-      await contract.balanceOf(await whitelistedUser.getAddress())
-    ).to.equal(1);
-    expect(await contract.balanceOf(await holder.getAddress())).to.equal(0);
-    expect(await contract.balanceOf(await externalUser.getAddress())).to.equal(
-      0
-    );
-  });
+    expect(await contract.balanceOf(await LogHolder1.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder2.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder3.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder4.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder5.getAddress())).to.equal(0);
 
-  it("Toggle for whtelist and public mint", async function () {
-    // value is must beetween 1 or 2. 1 is false and 2 is true
-    // if the value is not 1 or 2, it will be error
-
-    await expect(contract.setWhitelistMintEnable(0)).to.be.revertedWith("ToggleInputInvalid()");
-    await expect(contract.setPublicMintEnable(0)).to.be.revertedWith("ToggleInputInvalid()");
-
-    await expect(contract.setWhitelistMintEnable(3)).to.be.revertedWith("ToggleInputInvalid()");
-    await expect(contract.setPublicMintEnable(3)).to.be.revertedWith("ToggleInputInvalid()");
-  })
-
-  it("Whitelist sale", async function () {
-    // Bild merkleTree
-    const leafNode = whitelistAddresses.map((addr) => keccak256(addr));
-    const merkleTree = new MerkleTree(leafNode, keccak256, { sortPairs: true });
-    const rootHash = merkleTree.getRoot();
-    // update root hash
-    await (
-      await contract.setMerkleRootWhitelist("0x" + rootHash.toString("hex"))
-    ).wait();
-
-    await contract.setWhitelistMintEnable(2);
-
-    // sending insufficient funds
-    await expect(contract.connect(whitelistedUser).whitelistMint(
-        merkleTree.getHexProof(keccak256(await whitelistedUser.getAddress())),
-        { value: costWhitelist.sub(1) })
-    ).to.be.rejectedWith(Error,"InsufficientFunds()");
-
-    // pretending to be someone else
-    await expect(contract.connect(holder).whitelistMint(
-          merkleTree.getHexProof(keccak256(await whitelistedUser.getAddress())),
-          { value: costWhitelist })
-    ).to.be.revertedWith("InvalidProof()");
-
-    // Sending an invalid proof
-    await expect(contract.connect(holder).whitelistMint(
-          merkleTree.getHexProof(keccak256(await holder.getAddress())),
-          { value: costWhitelist })
-    ).to.be.revertedWith("InvalidProof()");
-
-    // Sending no proof at all
-    await expect(contract.connect(holder)
-        .whitelistMint([], { value: costWhitelist })
-    ).to.be.revertedWith("InvalidProof()");
-
-    // success
-    await contract.connect(whitelistedUser).whitelistMint(
-        merkleTree.getHexProof(keccak256(await whitelistedUser.getAddress())),
-        { value: costWhitelist }
-      );
-
-    // triying to mint twice
-    await expect(contract.connect(whitelistedUser).whitelistMint(
-          merkleTree.getHexProof(keccak256(await whitelistedUser.getAddress())),
-          { value: costWhitelist }
-        )
-    ).to.be.revertedWith("AddressWhitelistAlreadyClaimed()");
-
-    // Pause whitelis sale
-    await contract.setWhitelistMintEnable(1);
-
-    // check balance
-    expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
-    expect(await contract.balanceOf(await whitelistedUser.getAddress())).to.equal(2);
-    expect(await contract.balanceOf(await holder.getAddress())).to.equal(0);
-    expect(await contract.balanceOf(await externalUser.getAddress())).to.equal(0);
-  });
-
-  it("Public-sale", async function () {
-    await contract.setPublicMintEnable(2);
-
-    // Sending an invalid mint amount
-    await expect(contract.connect(whitelistedUser).publicMint(
-      4, { value: costPublic.mul(4)}))
-  .to.be.revertedWith("InvalidMintAmount()");
-
-    // success
-    await contract.connect(holder).publicMint(
-        3, { value: costPublic.mul(3)}
-    );
-
-    await contract.connect(whitelistedUser).publicMint(
-        2, { value: costPublic.mul(2) }
-    );
-
-    // sending insufficuent funds
-    await expect(contract.connect(holder).publicMint(
-        1, { value: costPublic.sub(2) }
-    )).to.be.rejectedWith(Error,"InsufficientFunds()");
-
-    // Sending an 0 mint amount
-    await expect(contract.connect(holder).publicMint(
-        0, { value: costPublic.mul(0)}))
-    .to.be.revertedWith("AmountCannotZero()");
-
-    // succes minting so the holder have 6 nft which is max nft that to have
-    await contract.connect(holder).publicMint(
-        3, { value: costPublic.mul(3)}
-    );
-
-    // error cause max of batch size
-    await expect(contract.connect(holder).publicMint(
-        1, { value: costPublic}))
-    .to.be.revertedWith("NftLimitAddressExceeded()");
-
-    // pause pre-sale
-    await contract.setPublicMintEnable(1);
-
-    // external user trying to mint when the feature is off
-    await expect(contract.connect(externalUser).publicMint(
-        1, { value: costPublic}))
-    .to.be.revertedWith("PublicDisable()");
-
-    // check balance
-    expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
-    expect(await contract.balanceOf(await whitelistedUser.getAddress())).to.equal(4);
-    expect(await contract.balanceOf(await holder.getAddress())).to.equal(6);
-    expect(await contract.balanceOf(await externalUser.getAddress())).to.equal(0);
+    // keep tracking that there is no token ID = 0
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
   });
 
   it("Owner only functions", async function () {
     await expect(
-      contract.connect(externalUser).giftMint([await externalUser.getAddress()])
+      contract.connect(LogHolder1).airdrops(0, await owner.getAddress(), 1)
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
-    await expect(contract.connect(externalUser).withdraw()).to.be.revertedWith(
-        "Ownable: caller is not the owner"
-      );
+    await expect(contract.connect(LogHolder1).withdraw()).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );
 
     await expect(
-    contract.connect(externalUser).setHiddenMetadata("INVALID_URI")
-    ).to.be.revertedWith("Ownable: caller is not the owner");
-
-    await expect(
-    contract.connect(externalUser).setMetadataBaseUri("INVALID_PREFIX")
+      contract.connect(LogHolder1).setHiddenMetadata("INVALID_URI")
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(
-      contract.connect(externalUser).setRevealed(false)
+      contract.connect(LogHolder1).setBaseUri("INVALID_PREFIX")
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(
-        contract.connect(externalUser).setMaxMintAmountPerTxPublic(99999)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
-
-    await expect(
-      contract.connect(externalUser).setCostPublic(utils.parseEther("0.0000001"))
+      contract.connect(LogHolder1).setRevealed(false)
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(
-        contract
-          .connect(externalUser)
-          .setMerkleRootWhitelist(
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-          )
-      ).to.be.revertedWith("Ownable: caller is not the owner");
-
-      await expect(
-          contract
-            .connect(externalUser)
-            .setMerkleRootRefund(
-              "0x0000000000000000000000000000000000000000000000000000000000000000"
-            )
-        ).to.be.revertedWith("Ownable: caller is not the owner");
-
-    await expect(
-        contract.connect(externalUser).setMaxSupplyPublic(10)
-        ).to.be.revertedWith("Ownable: caller is not the owner");
-
-    await expect(
-        contract.connect(externalUser).setMaxSupplyWhitelist(10)
+      contract.connect(LogHolder1).startMintingPhase()
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(
-        contract.connect(externalUser).setMaxSupplyGift(10)
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+      contract.connect(LogHolder1).startMintingFcfs()
+    ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(
-        contract.connect(externalUser).setCostWhitelist(utils.parseEther("0.0000001"))
-      ).to.be.revertedWith("Ownable: caller is not the owner");
-    
-    await expect(
-        contract.connect(externalUser).setPublicMintEnable(1)
+      contract.connect(LogHolder1).setPauseMintPhase(true)
     ).to.be.revertedWith("Ownable: caller is not the owner");
-          
-    await expect(
-        contract.connect(externalUser).setWhitelistMintEnable(1)
+
+    await expect ( 
+      contract.connect(LogHolder1).setPauseMintPublic(true)
     ).to.be.revertedWith("Ownable: caller is not the owner");
-              
-    await expect(
-        contract.connect(externalUser).setToogleForRefund(false)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
-                  
-    //await expect(contract.connect(externalUser).setUriSuffix('INVALID_SUFFIX')).to.be.revertedWith('Ownable: caller is not the owner');
   });
 
-  it("Set up Limit on minting feature", async function () {
-    // total supply = 5555
-    // public = 2000
-    // whitelist = 1000
-    // gift = 200
-    // available token => 5555 - (2000 + 1000 + 200) = 2355
+  it("Free mint Phase", async function () {
+    // turn on
+    await contract.startMintingPhase();
 
-    // if want to add supply 500 in public you cant to write 500, but you need to add the base value first so the actual value is 2500;
+    // still can't mint bacause contract is still close
+    await expect(
+      contract.connect(LogHolder1).freeMinting({ value: getPrice("0", 1) })
+    ).to.be.revertedWith("ContractIsPause()");
 
-    // but you can decrease directly the supply but make sure that supply is above token that already mint
-    // ex. if token public is already mint 60 and the supply limit is 2000
-    // you can change to 1000 or whatever at least above 60
+    // open the contract
+    await contract.setPauseMintPhase(false);
 
-    // trying change supply to 0
-    await expect(contract.connect(owner).setMaxSupplyPublic(0)
-    ).to.be.revertedWith("AmountCannotZero()");
+    // to ensure the enother minting phase is cannot to mint
+    await expect(
+      contract.connect(LogHolder1).reserve(2, { value: getPrice("0.024", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
 
-    // trying decrease supply public whre the value above token that already minted
-    // in this case public token that already minted is 8 
-    // you can set limit to 8 if you want to lock the supply and make sure it.
-    await expect(contract.connect(owner).setMaxSupplyPublic(7)
-    ).to.be.revertedWith("WrongInputSupply()");
+    await expect(
+      contract.connect(LogHolder1).mintPhase(2, 2, { value: getPrice("0.024", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
 
-    // try to add supply above token available
-    // 4356 from 2000 + 2355 + 1
-    await expect(contract.connect(owner).setMaxSupplyPublic(4356)
-    ).to.be.revertedWith("SupplyInputAboveLimit()");
+    await expect(
+      contract.connect(LogHolder1).mintPhase(3, 2, { value: getPrice("0.034", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
 
-    // so the conclusion is you can change the value supplu beween 8 -> 2355
+    await expect(
+      contract.connect(LogHolder1).claimReserve()
+    ).to.be.revertedWith("MintingPhaseClose()");
 
-    // success test //
-    // add 1000 token
-    await contract.connect(owner).setMaxSupplyPublic(3000);
+    // minting nft free mint
+    await contract.connect(LogHolder1).freeMinting({ value: getPrice("0", 1) });
 
-    // decrease
-    await contract.connect(owner).setMaxSupplyPublic(1000);
-    await contract.connect(owner).setMaxSupplyPublic(500);
-    await contract.connect(owner).setMaxSupplyPublic(50);
-    
-    // get all the available
-    await contract.connect(owner).setMaxSupplyPublic(4355);
+    // collect token locked from holder
+    for (let i = 1; i <= 5555; i++) {
+      if(await contract.exists(i) && (await contract.ownerOf(i)) == (await LogHolder1.getAddress())) {
+        tokenLocked = i;
+        break;
+      }
+    }
 
-    // return the value to 2000
-    await contract.connect(owner).setMaxSupplyPublic(2000);
-    
+    // try to mint again
+    await expect(
+      contract.connect(LogHolder1).freeMinting({ value: getPrice("0", 1) })
+    ).to.be.revertedWith("AddressAlreadyMaxClaimed()");
+
+    // check supply
+    expect((await contract.feature(0)).minted).to.be.equal(2);
+    expect(await contract.totalSupply()).to.be.equal(2);
+
+    // check balance
+    expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await LogHolder1.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await LogHolder2.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder3.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder4.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder5.getAddress())).to.equal(0);
+
+    // keep tracking that there is no token ID = 0
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
+
+    const from = await LogHolder1.getAddress();
+    const to = await LogHolder2.getAddress();
+
+    await expect(
+      contract.connect(LogHolder1).transferFrom(from, to, tokenLocked)
+    ).to.be.revertedWith("TokenLocked()");
+  });
+
+  it("Reserve Phase", async function () {
+    // trying to Reserve in free mint time phase
+    await expect(
+      contract.connect(LogHolder2).reserve(2, { value: getPrice("0.048", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    // fast forward the chain to 12 hours to check posibility
+    await network.provider.send("evm_increaseTime", [43201]); // 43201 -> 43200 seconds = 12 hour + 1 seconds
+    await network.provider.send("evm_mine");
+
+    // make sure another mint function is close
+    await expect(
+      contract.connect(owner).freeMinting({ value: getPrice("0", 1) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(LogHolder2).mintPhase(2, 2, { value: getPrice("0.024", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(LogHolder2).mintPhase(3, 2, { value: getPrice("0.034", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(LogHolder2).claimReserve()
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    // error
+    await expect(
+      contract.connect(LogHolder2).reserve(3, { value: getPrice("0.072", 3) })
+    ).to.be.revertedWith("InvalidMintAmount()");
+    await expect(
+      contract.connect(LogHolder2).reserve(0, { value: getPrice("0.024", 1) })
+    ).to.be.revertedWith("InvalidMintAmount()");
+    await expect(
+      contract.connect(LogHolder2).reserve(2, { value: getPrice("0.024", 1) })
+    ).to.be.revertedWith("InsufficientFunds()");
+
+    // success
+    await contract.connect(LogHolder2).reserve(1, { value: getPrice("0.024", 1) });
+
+    // error because already reserve 1, and only 1 nft can reserve
+    await expect(
+      contract.connect(LogHolder2).reserve(2, { value: getPrice("0.048", 2) })
+    ).to.be.revertedWith("ExceedeedTokenClaiming()");
+
+    // success again
+    await contract.connect(LogHolder2).reserve(1, { value: getPrice("0.024", 1) });
+
+    // error
+    await expect(
+      contract.connect(LogHolder2).reserve(1, { value: getPrice("0.024", 1) })
+    ).to.be.revertedWith("AddressAlreadyMaxClaimed()");
+
+    // check supply
+    expect((await contract.feature(1)).minted).to.be.equal(3);
+    expect(await contract.totalSupply()).to.be.equal(2);
+
+    // check balance
+    // balance is same with free mint, because Reserve doesnt minting token
+    expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await LogHolder1.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await LogHolder2.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder3.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder4.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder5.getAddress())).to.equal(0);
+
+    // keep tracking that there is no token ID = 0
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
+
+    const from = await LogHolder1.getAddress();
+    const to = await LogHolder2.getAddress();
+
+    await expect(
+      contract.connect(LogHolder1).transferFrom(from, to, tokenLocked)
+    ).to.be.revertedWith("TokenLocked()");
+  });
+
+  it("Guaranteed Phase", async function () {
+    // trying to mint guaranteed time phase
+    await expect(
+      contract.connect(LogHolder3).mintPhase(2, 2, { value: getPrice("0.024", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    // fast forward the chain to 2 hours to check posibility
+    await network.provider.send("evm_increaseTime", [7201]); // 7201 -> 7200 seconds = 2 hour + 1 seconds
+    await network.provider.send("evm_mine");
+
+    // reserve again and error because already close
+    await expect(
+      contract.connect(owner).freeMinting({ value: getPrice("0", 1) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(owner).reserve(1, { value: getPrice("0.024", 1) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(LogHolder3).mintPhase(3, 2, { value: getPrice("0.034", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(LogHolder3).claimReserve()
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    // error
+    await expect(
+      contract.connect(LogHolder3).mintPhase(2, 3, { value: getPrice("0.024", 3) })
+    ).to.be.revertedWith("InvalidMintAmount()");
+
+    await expect(
+      contract.connect(LogHolder3).mintPhase(2, 0, { value: getPrice("0.024", 0) })
+    ).to.be.revertedWith("InvalidMintAmount()");
+
+    await expect(
+      contract.connect(LogHolder3).mintPhase(2, 2, { value: getPrice("0.024", 1) })
+    ).to.be.revertedWith("InsufficientFunds()");
+
+    // success
+    await contract.connect(LogHolder3).mintPhase(2, 1, { value: getPrice("0.024", 1) });
+
+    // error
+    await expect(
+      contract.connect(LogHolder3).mintPhase(2, 2, { value: getPrice("0.024", 2) })
+    ).to.be.revertedWith("ExceedeedTokenClaiming()");
+
+    // success again
+    await contract.connect(LogHolder3).mintPhase(2, 1, { value: getPrice("0.024", 1) });
+
+    // error
+    await expect(
+      contract.connect(LogHolder3).mintPhase(2, 1, { value: getPrice("0.024", 1) })
+    ).to.be.revertedWith("AddressAlreadyMaxClaimed()");
+
+    // keep tract the token locked still can't be treadable
+    let from = await LogHolder1.getAddress();
+    let to = await owner.getAddress();
+
+    await expect(
+      contract.connect(LogHolder1).transferFrom(from, to, tokenLocked)
+    ).to.be.revertedWith("TokenLocked()");
+
+    // check supply
+    expect((await contract.feature(2)).minted).to.be.equal(3);
+    expect(await contract.totalSupply()).to.be.equal(4);
+
+    // check balance
+    expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await LogHolder1.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await LogHolder2.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder3.getAddress())).to.equal(2);
+    expect(await contract.balanceOf(await LogHolder4.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder5.getAddress())).to.equal(0);
+
+    // keep tracking that there is no token ID = 0
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
+  });
+
+  it("Mint fcfs", async function () {
+    // trying to mint in fcfs time phase
+    await expect(
+      contract.connect(LogHolder4).mintPhase(3, 2, { value: getPrice("0.034", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    // fast forward the chain to 2 hours to check posibility
+    // it mean free mint, reserve, and guaranteed is already close
+    await network.provider.send("evm_increaseTime", [7201]); // 7201 -> 7200 seconds = 2 hour + 1 seconds
+    await network.provider.send("evm_mine");
+
+    // error bacasue contract is close
+    await expect(
+      contract.connect(owner).freeMinting({ value: getPrice("0", 1) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(LogHolder4).reserve(2, { value: getPrice("0.024", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(LogHolder4).mintPhase(2, 2, { value: getPrice("0.024", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(LogHolder4).mintPhase(3, 2, { value: getPrice("0.034", 2) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(LogHolder4).claimReserve()
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    // turn off all the minting phase
+    await contract.setPauseMintPhase(true);
+
+    // turn on fcfs mint phase
+    await contract.startMintingFcfs();
+
+    await expect(
+      contract.connect(LogHolder4).mintPhase(3, 3, { value: getPrice("0.034", 3) })
+    ).to.be.revertedWith("ContractIsPause()");
+
+    await contract.setPauseMintPhase(false);
+
+    // error
+    await expect(
+      contract.connect(LogHolder4).mintPhase(3, 3, { value: getPrice("0.034", 3) })
+    ).to.be.revertedWith("InvalidMintAmount()");
+
+    await expect(
+      contract.connect(LogHolder4).mintPhase(3, 0, { value: getPrice("0.034", 0) })
+    ).to.be.revertedWith("InvalidMintAmount()");
+
+    await expect(
+      contract.connect(LogHolder4).mintPhase(3, 2, { value: getPrice("0.034", 1) })
+    ).to.be.revertedWith("InsufficientFunds()");
+
+    // success
+    await contract.connect(LogHolder4).mintPhase(3, 1, { value: getPrice("0.034", 1) });
+
+    // error
+    await expect(
+      contract.connect(LogHolder4).mintPhase(3, 2, { value: getPrice("0.034", 2) })
+    ).to.be.revertedWith("ExceedeedTokenClaiming()");
+
+    // success again
+    await contract.connect(LogHolder4).mintPhase(3, 1, { value: getPrice("0.034", 1) });
+
+    // error
+    await expect(
+      contract.connect(LogHolder4).mintPhase(3, 1, { value: getPrice("0.034", 1) })
+    ).to.be.revertedWith("AddressAlreadyMaxClaimed()");
+
+    // keep tract the token locked still can't be treadable
+    let from = await LogHolder1.getAddress();
+    let to = await owner.getAddress();
+
+    await expect(
+      contract.connect(LogHolder1).transferFrom(from, to, tokenLocked)
+    ).to.be.revertedWith("TokenLocked()");
+
+    // check supply
+    expect((await contract.feature(3)).minted).to.be.equal(4);
+    expect(await contract.totalSupply()).to.be.equal(6);
+
+    // check balance
+    expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await LogHolder1.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await LogHolder2.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await LogHolder3.getAddress())).to.equal(2);
+    expect(await contract.balanceOf(await LogHolder4.getAddress())).to.equal(2);
+    expect(await contract.balanceOf(await LogHolder5.getAddress())).to.equal(0);
+
+    // keep tracking that there is no token ID = 0
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
+  });
+
+  it("Claim NFT from Reserve", async function () {
+
+    // error because address not reserve token
+    await expect(
+      contract.connect(LogHolder5).claimReserve()
+    ).to.be.revertedWith("AddressAlreadyClaimOrNotReserve()");
+
+    // success claim and automatically claim total token has reserve
+    await contract.connect(LogHolder2).claimReserve();
+
+    // error claim twice
+    await expect(
+      contract.connect(LogHolder2).claimReserve()
+    ).to.be.revertedWith("AddressAlreadyClaimOrNotReserve()");
+
+    // fast forward the chain to 2 hours to check posibility
+    await network.provider.send("evm_increaseTime", [72001]); // 72001 -> 7200 seconds = 2 hour + 1 seconds
+    await network.provider.send("evm_mine");
+
+    // trying mint and claim in close phase that get error
+    await expect(
+      contract.connect(owner).mintPhase(3, 1, { value: getPrice("0.034", 1) })
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    await expect(
+      contract.connect(owner).claimReserve()
+    ).to.be.revertedWith("MintingPhaseClose()");
+
+    // check supply
+    expect(await contract.totalSupply()).to.be.equal(8);
+
+    // check balance and all token already mint
+    expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await LogHolder1.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await LogHolder2.getAddress())).to.equal(2);
+    expect(await contract.balanceOf(await LogHolder3.getAddress())).to.equal(2);
+    expect(await contract.balanceOf(await LogHolder4.getAddress())).to.equal(2);
+    expect(await contract.balanceOf(await LogHolder5.getAddress())).to.equal(0);
+
+    // keep tracking that there is no token ID = 0
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
   });
 
   it("Token URI generation", async function () {
     // update again
-    const genesis = await contract.hiddenMetadata();
+    const genesis = CollectionConfig.hiddenMetadata;
     const uriPrefix = "ipfs://QmPheZWCLHygMQLQiRVmAWD4YZBcgLndC1V3ZGVW8AECkW/";
     const uriSuffix = ".json";
-    const tokenId = testForRefundToken.toNumber();
+    let tokenAlreadyMinted = [];
 
-    for (let i =  0; i < CollectionConfig.maxSupply; i++) {
-      if (await contract.)
+    // take the token ID that already mint
+    for (let i =  1; i <= 5555; i++) {
+      if (await contract.exists(i)) {
+        tokenAlreadyMinted.push(i);
+      }
     }
 
-    expect(await contract.tokenURI(tokenId)).to.equal(
-      `${genesis}tokenId${uriSuffix}`
-    );
+    for (let i = 0; i < tokenAlreadyMinted.length; i++) {
+      expect(await contract.tokenURI(tokenAlreadyMinted[i])).to.equal(genesis);
+    }
 
     // Reveal collection
-    await contract.setUriPrefix(uriPrefix);
+    await contract.setBaseUri(uriPrefix);
     await contract.setRevealed(true);
 
-    // ERC721A uses token IDs starting from 0 internally...
-    await expect(contract.tokenURI(0)).to.be.revertedWith(
-      "URI query for nonexistent token"
-    );
-
     // Testing first and last minted tokens
-    expect(await contract.tokenURI(tokenId)).to.equal(
-      `${uriPrefix}tokenId${uriSuffix}`
-    );
+    for (let i = 0; i < tokenAlreadyMinted.length; i++) {
+      expect(await contract.tokenURI(tokenAlreadyMinted[i])).to.equal(`${uriPrefix}${tokenAlreadyMinted[i]}${uriSuffix}`);
+    }
+
+    // keep tracking that there is no token ID = 0
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
   });
+
+  it("Token from free mint can treadable", async function () {
+    const from = await owner.getAddress();
+    const to = await LogHolder5.getAddress();
+
+    // token can transfer because token is not locked
+    await contract.connect(owner).transferFrom(from, to, tokenUnlocked);
+
+    await expect(
+      contract.connect(LogHolder1).transferFrom(await LogHolder1.getAddress(), to, tokenLocked)
+    ).to.be.revertedWith("TokenLocked()");
+
+    // fast forward the chain to 7 days to check posibility
+    await network.provider.send("evm_increaseTime", [604801]);
+    await network.provider.send("evm_mine");
+
+    // token is not locked again
+    // but still well revert an error
+    // becasue when holder mint the nft, holder not fully own the token
+    // this is the standard from ERC721
+    // and need to approve first from owner
+    // const currentBlock = await ethers.provider.getBlockNumber();
+    // const blockTimestamp = (await ethers.provider.getBlock(currentBlock)).timestamp;
+    // console.log(blockTimestamp);
+    await contract.connect(LogHolder1).transferFrom(await LogHolder1.getAddress(), to, tokenLocked);
+  });
+
+  // it("Withdraw", async function () {
+  //   // success
+  //   await contract.connect(owner).withdraw();
+
+  //   // error = balance is 0
+  //   await expect(contract.connect(owner).withdraw()).to.be.revertedWith(
+  //       "InsufficientFunds()"
+  //   );
+
+  // });
 
   // it("Refund", async function () {
   //   // set up merkleRoot for refund
@@ -483,40 +716,6 @@ describe(CollectionConfig.contractName, function () {
   //       merkleTree.getHexProof(keccak256(await whitelistedUser.getAddress()))
   //     );
   // });
-
-  it("Withdraw", async function () {
-    // witdraw need all feature is off
-    await contract.connect(owner).setToogleForRefund(true);
-    await contract.connect(owner).setPublicMintEnable(2);
-    await contract.connect(owner).setWhitelistMintEnable(2);
-    
-    await expect(contract.connect(owner).withdraw()).to.be.revertedWith(
-        "NeedAllFeaturesOff()"
-    );
-        
-    await contract.connect(owner).setToogleForRefund(false);
-
-    await expect(contract.connect(owner).withdraw()).to.be.revertedWith(
-        "NeedAllFeaturesOff()"
-    );
-
-    await contract.connect(owner).setPublicMintEnable(1);
-
-    await expect(contract.connect(owner).withdraw()).to.be.revertedWith(
-        "NeedAllFeaturesOff()"
-    );
-
-    await contract.connect(owner).setWhitelistMintEnable(1);
-
-    // success
-    await contract.connect(owner).withdraw();
-
-    // error = balance is 0
-    await expect(contract.connect(owner).withdraw()).to.be.revertedWith(
-        "InsufficientFunds()"
-    );
-
-  });
 
   // it('Wallet of owner', async function () {
   //   expect(await contract.tokensOfOwner(await owner.getAddress())).deep.equal([

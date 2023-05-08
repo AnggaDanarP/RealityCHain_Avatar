@@ -5,7 +5,7 @@ export default interface CollectionConfigInterface {
     testnet: NetworkConfigInterface;
     mainnet: NetworkConfigInterface;
     contractName: string;
-    maxSupply: number;
+    durationLockToken: number;
     hiddenMetadata: string;
     contractAddress: string|null;
     whiteListAddresses: string[];
