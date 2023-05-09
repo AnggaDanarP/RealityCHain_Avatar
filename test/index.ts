@@ -651,16 +651,16 @@ describe(CollectionConfig.contractName, function () {
     await contract.connect(LogHolder1).transferFrom(await LogHolder1.getAddress(), to, tokenLocked);
   });
 
-  // it("Withdraw", async function () {
-  //   // success
-  //   await contract.connect(owner).withdraw();
+  it("Withdraw", async function () {
+    // success
+    await contract.connect(owner).withdraw();
 
-  //   // error = balance is 0
-  //   await expect(contract.connect(owner).withdraw()).to.be.revertedWith(
-  //       "InsufficientFunds()"
-  //   );
+    // error = balance is 0
+    await expect(contract.connect(owner).withdraw()).to.be.revertedWith(
+        "InsufficientFunds()"
+    );
 
-  // });
+  });
 
   // it("Refund", async function () {
   //   // set up merkleRoot for refund
