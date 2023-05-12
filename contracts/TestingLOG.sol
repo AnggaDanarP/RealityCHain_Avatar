@@ -27,12 +27,12 @@ error WrongInputPhase();
 contract TestingLOG is ERC721r, Ownable {
     using Strings for uint256;
 
+    bool private pauseContract = true;
+    bool private _revealed = false;
     uint256 private constant MAX_SUPPLY = 5555;
     uint256 private _timeTokenLock;
     string private _hiddenMetadata;
     string private _uriPrefix;
-    bool private pauseContract = true;
-    bool private _revealed = false;
 
     struct PhaseSpec {
         uint256 supply;
@@ -60,7 +60,7 @@ contract TestingLOG is ERC721r, Ownable {
         uint256 _timeTokenLocked
     ) ERC721r("Testing-LOG", "TLOG", MAX_SUPPLY) {
         _hiddenMetadata = _hiddenMetadataUri;
-        setDurationTokenLock(_timeTokenLocked);
+        setDurationTokenLock_JwA(_timeTokenLocked);
 
         feature[PhaseMint.publicMint] = PhaseSpec({
             supply: 1,
@@ -111,7 +111,30 @@ contract TestingLOG is ERC721r, Ownable {
     // ===================================================================
     //                            MODIFIER
     // ===================================================================
-    modifier mintCompliance(PhaseMint _phase, uint256 _mintAmount) {
+    function mintCompliance_d7A(PhaseMint _phase, uint256 _mintAmount) private {
+        uint256 _maxAmountPerAddress = feature[_phase].maxAmountPerAddress;
+        uint256 _supply = feature[_phase].supply;
+        uint256 _totalMinted = feature[_phase].minted + _mintAmount;
+        if (_mintAmount < 1 || _mintAmount > _maxAmountPerAddress) {
+            revert InvalidMintAmount();
+        }
+        if (_addressClaim[msg.sender][_phase] == _maxAmountPerAddress) {
+            revert AddressAlreadyMaxClaimed();
+        }
+        if (
+            _addressClaim[msg.sender][_phase] + _mintAmount >
+            _maxAmountPerAddress
+        ) {
+            revert ExceedeedTokenClaiming();
+        }
+        if (_totalMinted - 1 > _supply) {
+            revert SupplyExceedeed();
+        }
+        _addressClaim[msg.sender][_phase] += _mintAmount;
+        feature[_phase].minted = _totalMinted;
+    }
+
+    modifier isOpen_n6F(PhaseMint _phase) {
         if (pauseContract) revert ContractIsPause();
         if (
             block.timestamp < feature[_phase].startTime ||
@@ -119,87 +142,58 @@ contract TestingLOG is ERC721r, Ownable {
         ) {
             revert MintingPhaseClose();
         }
-        if (
-            _mintAmount < 1 || _mintAmount > feature[_phase].maxAmountPerAddress
-        ) {
-            revert InvalidMintAmount();
-        }
-        if (
-            _addressClaim[msg.sender][_phase] ==
-            feature[_phase].maxAmountPerAddress
-        ) {
-            revert AddressAlreadyMaxClaimed();
-        }
-        if (
-            _addressClaim[msg.sender][_phase] + _mintAmount >
-            feature[_phase].maxAmountPerAddress
-        ) {
-            revert ExceedeedTokenClaiming();
-        }
-        if (
-            (feature[_phase].minted - 1) + _mintAmount > feature[_phase].supply
-        ) {
-            revert SupplyExceedeed();
-        }
-        _addressClaim[msg.sender][_phase] += _mintAmount;
-        feature[_phase].minted += _mintAmount;
         _;
     }
 
-    modifier checkCost(PhaseMint _phase, uint256 _mintAmount) {
+    modifier checkCost_Qo_(PhaseMint _phase, uint256 _mintAmount) {
         if (msg.value < _mintAmount * feature[_phase].cost) {
             revert InsufficientFunds();
         }
         _;
     }
 
-    modifier checkMintPhase(PhaseMint _phase) {
-        if (
-            _phase == PhaseMint.freeMint ||
-            _phase == PhaseMint.reserve
-        ) revert WrongInputPhase();
+    modifier checkMintPhase_prD(PhaseMint _phase) {
+        if (_phase == PhaseMint.freeMint || _phase == PhaseMint.reserve)
+            revert WrongInputPhase();
         _;
     }
 
     // ===================================================================
     //                                MINT
     // ===================================================================
-    function freeMinting() external mintCompliance(PhaseMint.freeMint, 1) {
+    function freeMinting_jW() external isOpen_n6F(PhaseMint.freeMint) {
+        mintCompliance_d7A(PhaseMint.freeMint, 1);
         uint256 _tokenId = getRandomIndex(msg.sender);
         _tokenLocked[_tokenId] = true;
         _mintAtIndex(msg.sender, _tokenId);
     }
 
-    function reserve(
+    function reserve_Jm7(
         uint256 amountReserve
     )
         external
         payable
-        checkCost(PhaseMint.reserve, amountReserve)
-        mintCompliance(PhaseMint.reserve, amountReserve)
-    {}
+        isOpen_n6F(PhaseMint.reserve)
+        checkCost_Qo_(PhaseMint.reserve, amountReserve)
+    {
+        mintCompliance_d7A(PhaseMint.reserve, amountReserve);
+    }
 
-    function mintPhase(
+    function mintPhase_d7v(
         PhaseMint _phase,
         uint256 mintAmount
     )
         external
         payable
-        checkMintPhase(_phase)
-        checkCost(_phase, mintAmount)
-        mintCompliance(_phase, mintAmount)
+        checkMintPhase_prD(_phase)
+        isOpen_n6F(_phase)
+        checkCost_Qo_(_phase, mintAmount)
     {
+        mintCompliance_d7A(_phase, mintAmount);
         _mintRandom(msg.sender, mintAmount);
     }
 
-    function claimReserve() external {
-        if (pauseContract) revert ContractIsPause();
-        if (
-            block.timestamp < feature[PhaseMint.fcfs].startTime ||
-            block.timestamp > feature[PhaseMint.fcfs].endTime
-        ) {
-            revert MintingPhaseClose();
-        }
+    function claimReverse_To$() external isOpen_n6F(PhaseMint.fcfs) {
         uint256 _tokenReserve = _addressClaim[msg.sender][PhaseMint.reserve];
         if (_tokenReserve == 0) revert AddressAlreadyClaimOrNotReserve();
         _addressClaim[msg.sender][PhaseMint.reserve] = 0;
@@ -207,18 +201,18 @@ contract TestingLOG is ERC721r, Ownable {
         _mintRandom(msg.sender, _tokenReserve);
     }
 
-    function airdrops(address to, uint256 mintAmount) external onlyOwner {
+    function airdrops_19M(address to, uint256 mintAmount) external onlyOwner {
         _mintRandom(to, mintAmount);
     }
 
     // ===================================================================
     //                          OWNER FUNCTION
     // ===================================================================
-    function setDurationTokenLock(uint256 _duration) public onlyOwner {
+    function setDurationTokenLock_JwA(uint256 _duration) public onlyOwner {
         _timeTokenLock = block.timestamp + _duration;
     }
 
-    function startMintingPhase() external onlyOwner {
+    function startMintingPhase__QF() external onlyOwner {
         feature[PhaseMint.freeMint].startTime = block.timestamp;
         feature[PhaseMint.freeMint].endTime = block.timestamp + 12 hours;
         feature[PhaseMint.reserve].startTime = feature[PhaseMint.freeMint].endTime;
@@ -227,7 +221,7 @@ contract TestingLOG is ERC721r, Ownable {
         feature[PhaseMint.guaranteed].endTime = block.timestamp + 16 hours;
     }
 
-    function startMintingFcfs() external onlyOwner {
+    function startMintingFcfs_Tg_() external onlyOwner {
         uint256 alreadyMinted = totalSupply();
         uint256 tokenReserve = feature[PhaseMint.reserve].minted - 1;
         feature[PhaseMint.fcfs].supply = MAX_SUPPLY - (alreadyMinted + tokenReserve);
@@ -235,36 +229,36 @@ contract TestingLOG is ERC721r, Ownable {
         feature[PhaseMint.fcfs].endTime = block.timestamp + 2 hours;
     }
 
-    function startMintingPublic(uint256 _duration) external onlyOwner {
+    function startMintingPublic_e68(uint256 _duration) external onlyOwner {
         uint256 alreadyMinted = totalSupply();
         feature[PhaseMint.publicMint].supply = MAX_SUPPLY - alreadyMinted;
         feature[PhaseMint.publicMint].startTime = block.timestamp;
         feature[PhaseMint.publicMint].endTime = block.timestamp + _duration;
     }
 
-    function setPauseContract(bool _state) external onlyOwner {
+    function setPauseContract_YlV(bool _state) external onlyOwner {
         pauseContract = _state;
     }
 
-    function setCostPublicMint(uint256 _newCost) external onlyOwner {
+    function setCostPublicMint_vrO(uint256 _newCost) external onlyOwner {
         feature[PhaseMint.publicMint].cost = _newCost;
     }
 
-    function setHiddenMetadata(
+    function setHiddenMetadata_78Q(
         string memory _hiddenMetadataUri
     ) external onlyOwner {
         _hiddenMetadata = _hiddenMetadataUri;
     }
 
-    function setBaseUri(string memory _newUriPrefix) external onlyOwner {
+    function setBaseUri_c7$(string memory _newUriPrefix) external onlyOwner {
         _uriPrefix = _newUriPrefix;
     }
 
-    function setRevealed(bool _state) external onlyOwner {
+    function setRevealed_I4w(bool _state) external onlyOwner {
         _revealed = _state;
     }
 
-    function withdraw() external onlyOwner {
+    function withdraw_wdp() external onlyOwner {
         if (!pauseContract) revert ContractIsNotPause();
         uint256 balance = address(this).balance;
         if (balance == 0) revert InsufficientFunds();
