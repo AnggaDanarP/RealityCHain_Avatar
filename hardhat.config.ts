@@ -9,6 +9,7 @@ import '@typechain/hardhat';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import CollectionConfig from './config/CollectionConfig';
+import "hardhat-gas-reporter";
 
 dotenv.config();
 
@@ -146,9 +147,11 @@ const config: HardhatUserConfig = {
     },
   },
   gasReporter: {
-    enabled: process.env.REPORT_GAS !== undefined,
+    // enabled: process.env.REPORT_GAS ? true : false,
+    enabled : true,
     currency: 'USD',
     coinmarketcap: process.env.GAS_REPORTER_COIN_MARKET_CAP_API_KEY,
+    // outputFile : 'gass-report.txt',
   },
   etherscan: {
     apiKey: {

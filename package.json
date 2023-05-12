@@ -55,7 +55,7 @@
     "erc721a": "^4.2.2",
     "ethereum-waffle": "^3.4.4",
     "ethers": "^5.0.0",
-    "hardhat-gas-reporter": "^1.0.8",
+    "hardhat-gas-reporter": "^1.0.9",
     "keccak256": "^1.0.6",
     "merkletreejs": "^0.2.27",
     "solidity-coverage": "^0.7.21",
