@@ -1,12 +1,14 @@
-This is a Smart contract NFT project
+# NFT Minting Random
+This is a Smart contract NFT project that using minting random concept using [ERC721R library](https://medium.com/@dumbnamenumbers/erc721r-a-new-erc721-contract-for-random-minting-so-people-dont-snipe-all-the-rares-68dd06611e5) to get token ID randomly.
+
 ## Features
-1. Refund
-2. split withdraw for artist royalties and company
-3. Royalties for artis (ERC2981)
-4. Template project for all EVM environtment (expecially ETH or Polygon)
-5. Ready for testing
-6. Already audit using Slither
-7. Ready for Goerli new testnet
+1. Free minting: This phase is free minting but the NFT is cannot tradeable by the time that setup from owner. Each address will only get 1 NFT.
+2. Rserve: Holders will reserve nft tokens but they do not directly get the nft and only reserve tokens. Each Address only have 2 NFT.
+3. Guaranteed: Normal minting with low prices and each address only has the opportunity to get 2 NFTs.
+4. FCFS: Like the public minting feature, this feature is also like normal minting but has a higher price.
+5. Claiming Reserve: This feature is only open on FCFS where addresses that have reserved before can claim tokens for the number of tokens that were reserved.
+6. Airdrop: This function is only performed by the owner who can provide tokens to the specified address and then supply them based on the minting phase determined by the owner.
+7. Public mint: This feature will be opened if it is needed under certain conditions by the owner.
 
 ## Getting Started
 
@@ -52,37 +54,6 @@ You can start copiying the file and modifying `.env.example`. The file must be r
     ```
     `<transaction hash>` place to transaction hash that you get from deploy.
     the output will show the link to [etherscan](https://rinkeby.etherscan.io/)
-5. Try the feature
-    - Open/close whitelist minting
-        ```bash
-        yarn whitelist-open --network <your network>
-        ```
-        ```bash
-        yarn whitelist-close --network <your network>
-        ```
-    - Open/Close Pre sale minting
-        ```bash
-        yarn presale-open --network <your network>
-        ```
-        ```bash
-        yarn presale-close --network <your network>
-        ```
-    - Open/Close Prublic sale minting
-        ```bash
-        yarn public-sale-open --network <your network>
-        ```
-        ```bash
-        yarn public-sale-close --network <your network>
-        ```
-    - Revealed the NFT
-        ```bash
-        yarn reveal --network <your network>
-        ```
-    - Withdraw the funds
-        ```bash
-        yarn withdraw --network <your network>
-        ```
-    To see all the CLI command, see `package.jason` file, and see script section.
 
 ###### Dont forget to close the feature to make your smart contract save 
     
