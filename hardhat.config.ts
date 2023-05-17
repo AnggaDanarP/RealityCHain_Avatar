@@ -157,6 +157,7 @@ const config: HardhatUserConfig = {
     apiKey: {
       // Ethereum
       goerli: process.env.BLOCK_EXPLORER_API_KEY!,
+      sepolia: process.env.BLOCK_EXPLORER_API_KEY!,
       rinkeby: process.env.BLOCK_EXPLORER_API_KEY!,
       mainnet: process.env.BLOCK_EXPLORER_API_KEY!,
       // Polygon

@@ -639,7 +639,7 @@ describe(CollectionConfig.contractName, function () {
 
     // check supply
     expect((await contract.feature(1)).minted).to.be.equal(2);
-    expect((await contract.feature(2)).minted).to.be.equal(3);
+    expect((await contract.feature(2)).minted).to.be.equal(5);
     expect((await contract.feature(3)).minted).to.be.equal(3);
     expect((await contract.feature(4)).minted).to.be.equal(3);
     expect(await contract.totalSupply()).to.be.equal(8);
@@ -729,7 +729,7 @@ describe(CollectionConfig.contractName, function () {
     // check supply
     expect((await contract.feature(0)).minted).to.be.equal(7);
     expect((await contract.feature(1)).minted).to.be.equal(2);
-    expect((await contract.feature(2)).minted).to.be.equal(3);
+    expect((await contract.feature(2)).minted).to.be.equal(5);
     expect((await contract.feature(3)).minted).to.be.equal(3);
     expect((await contract.feature(4)).minted).to.be.equal(3);
     expect(await contract.totalSupply()).to.be.equal(14);

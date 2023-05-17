@@ -111,7 +111,7 @@ contract TestingLOG is ERC721r, Ownable {
     // ===================================================================
     //                            MODIFIER
     // ===================================================================
-    function mintCompliance_d7A(PhaseMint _phase, uint256 _mintAmount) private {
+    modifier mintCompliance_d7A(PhaseMint _phase, uint256 _mintAmount) {
         uint256 _maxAmountPerAddress = feature[_phase].maxAmountPerAddress;
         uint256 _supply = feature[_phase].supply;
         uint256 _totalMinted = feature[_phase].minted + _mintAmount;
@@ -132,6 +132,7 @@ contract TestingLOG is ERC721r, Ownable {
         }
         _addressClaim[msg.sender][_phase] += _mintAmount;
         feature[_phase].minted = _totalMinted;
+        _;
     }
 
     modifier isOpen_n6F(PhaseMint _phase) {
@@ -161,8 +162,11 @@ contract TestingLOG is ERC721r, Ownable {
     // ===================================================================
     //                                MINT
     // ===================================================================
-    function freeMinting_jW() external isOpen_n6F(PhaseMint.freeMint) {
-        mintCompliance_d7A(PhaseMint.freeMint, 1);
+    function freeMinting_jW()
+        external
+        isOpen_n6F(PhaseMint.freeMint)
+        mintCompliance_d7A(PhaseMint.freeMint, 1)
+    {
         uint256 _tokenId = getRandomIndex(msg.sender);
         _tokenLocked[_tokenId] = true;
         _mintAtIndex(msg.sender, _tokenId);
@@ -175,9 +179,8 @@ contract TestingLOG is ERC721r, Ownable {
         payable
         isOpen_n6F(PhaseMint.reserve)
         checkCost_Qo_(PhaseMint.reserve, amountReserve)
-    {
-        mintCompliance_d7A(PhaseMint.reserve, amountReserve);
-    }
+        mintCompliance_d7A(PhaseMint.reserve, amountReserve)
+    {}
 
     function mintPhase_d7v(
         PhaseMint _phase,
@@ -188,8 +191,8 @@ contract TestingLOG is ERC721r, Ownable {
         checkMintPhase_prD(_phase)
         isOpen_n6F(_phase)
         checkCost_Qo_(_phase, mintAmount)
+        mintCompliance_d7A(_phase, mintAmount)
     {
-        mintCompliance_d7A(_phase, mintAmount);
         _mintRandom(msg.sender, mintAmount);
     }
 
@@ -197,7 +200,6 @@ contract TestingLOG is ERC721r, Ownable {
         uint256 _tokenReserve = _addressClaim[msg.sender][PhaseMint.reserve];
         if (_tokenReserve == 0) revert AddressAlreadyClaimOrNotReserve();
         _addressClaim[msg.sender][PhaseMint.reserve] = 0;
-        feature[PhaseMint.reserve].minted -= _tokenReserve;
         _mintRandom(msg.sender, _tokenReserve);
     }
 
