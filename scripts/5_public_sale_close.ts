@@ -1,18 +1,14 @@
-import { BigNumber } from "ethers";
-import NftContractProvider from '../lib/NftContractProvider';
+import NftContractProvider from "../lib/NftContractProvider";
 
 async function main() {
-    // Attach to deployed contract
+    // attach to deployed contract
     const contract = await NftContractProvider.getContract();
 
-    // Pause the contract (if needed)
-    if ((await contract.feature(0)).toggle == BigNumber.from(2)) {
-        console.log('Pausing the contract...');
+    // Unpause the contract (if needed)
+    console.log('Unpausing the contract...');
+    await (await contract.openPublictMint(4, false, 50)).wait();
 
-        await (await contract.setPublicMintEnable(1)).wait();
-    }
-
-    console.log('Public sale is now closed!');
+    console.log('Public sale is now close!');
 }
 
 main().catch((error) => {

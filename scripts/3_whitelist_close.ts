@@ -6,11 +6,10 @@ async function main() {
     const contract = await NftContractProvider.getContract();
 
     // disable whitelist sale (if needed)
-    if ((await contract.feature(1)).toggle == BigNumber.from(1)) {
-        console.log("Disabling whitelist sale...");
-
-        await (await contract.setWhitelistMintEnable(1)).wait();
-    }
+    console.log("Disabling whitelist sale...");
+    await (await contract.openWhitelistMint(1, false)).wait();
+    await (await contract.openWhitelistMint(2, false)).wait();
+    await (await contract.openWhitelistMint(3, false)).wait();
     
     console.log("Whitelist sale has been disabled!");
 }

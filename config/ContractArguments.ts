@@ -1,9 +1,8 @@
-import { utils } from "ethers";
+// import { utils } from "ethers";
 import CollectionConfig from "./CollectionConfig";
 
 const ContractArguments = [
-    CollectionConfig.hiddenMetadata,
-    CollectionConfig.durationLockToken
+    CollectionConfig.hiddenMetadata
 ] as const;
 
 export default ContractArguments;

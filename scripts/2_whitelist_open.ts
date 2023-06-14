@@ -5,31 +5,43 @@ import CollectionConfig from "./../config/CollectionConfig";
 import NftContractProvider from "./../lib/NftContractProvider";
 
 async function main() {
-    if (CollectionConfig.whiteListAddresses.length < 1) {
+    if (CollectionConfig.freeMintAddress.length < 1) {
         throw "\x1b[31merror\x1b[0m" + "The whitelist is emty, please add some address to the configuration.";
     }
 
     // Build merkle tree
-    const leafNodes = CollectionConfig.whiteListAddresses.map(addr => keccak256(addr));
-    const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
-    const rootHash = "0x" + merkleTree.getRoot().toString("hex");
+    let leafNodes = CollectionConfig.freeMintAddress.map(addr => keccak256(addr));
+    let merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
+    const rootHashFreeMint = "0x" + merkleTree.getRoot().toString("hex");
+
+    leafNodes = CollectionConfig.reserveAddress.map(addr => keccak256(addr));
+    merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
+    const rootHashReserve = "0x" + merkleTree.getRoot().toString("hex");
+
+    leafNodes = CollectionConfig.reserveAddress.map(addr => keccak256(addr));
+    merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
+    const rootHashGuarenteed = "0x" + merkleTree.getRoot().toString("hex");
+
 
     // attach to deploy contract
     const contract = await NftContractProvider.getContract();
 
     //update root hash (if changed)
-    if ((await contract.merkleRoot(0)) !== rootHash) {
-        console.log(`Updating the root hash to ${rootHash}...`);
+    console.log(`Updating the root hash free mint to ${rootHashFreeMint}...`);
+    await (await contract.setMerkleRoot(1, rootHashFreeMint)).wait();
 
-        await (await contract.setMerkleRootWhitelist(rootHash)).wait();
-    }
+    console.log(`Updating the root hash free mint to ${rootHashReserve}...`);
+    await (await contract.setMerkleRoot(2, rootHashReserve)).wait();
+
+    console.log(`Updating the root hash free mint to ${rootHashGuarenteed}...`);
+    await (await contract.setMerkleRoot(3, rootHashGuarenteed)).wait();
+    
 
     // Enable whitelist sale (if needed)
-    if ((await contract.feature(1)).toggle == BigNumber.from(1)) {
-        console.log("Enabling whitelist sale...");
-
-        await (await contract.setWhitelistMintEnable(2)).wait();
-    }
+    console.log("Enabling whitelist sale...");
+    await (await contract.openWhitelistMint(1, true)).wait();
+    await (await contract.openWhitelistMint(2, true)).wait();
+    await (await contract.openWhitelistMint(3, true)).wait();
 
     console.log("Whitelist sale has been enabled!");
 }

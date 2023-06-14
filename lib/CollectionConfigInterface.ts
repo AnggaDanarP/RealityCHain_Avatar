@@ -8,9 +8,9 @@ export default interface CollectionConfigInterface {
     durationLockToken: number;
     hiddenMetadata: string;
     contractAddress: string|null;
-    whiteListAddresses: string[];
-    refundAddress: string[];
-    addressAirdrops: string[];
+    freeMintAddress: string[];
+    reserveAddress: string[];
+    guarantedAddress: string[];
     marketplaceIdentifier: string;
     marketplaceConfig: MarketplaceConfigInterface;
 };

@@ -8,8 +8,10 @@ SPDX-License-Identifier: MIT
 */
 pragma solidity 0.8.19;
 
-import "../contracts/token/ERC721r.sol";
+import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 error AddressAlreadyMaxClaimed();
 error MintingPhaseClose();
@@ -23,87 +25,76 @@ error TokenLocked();
 error ContractIsPause();
 error ContractIsNotPause();
 error WrongInputPhase();
+error InvalidProof();
 
-contract TestingLOG is ERC721r, Ownable {
-    using Strings for uint256;
-
+contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     bool private pauseContract = true;
     bool private _revealed = false;
+    bool private _tokenLock = true;
     uint256 private constant MAX_SUPPLY = 5555;
-    uint256 private _timeTokenLock;
     string private _hiddenMetadata;
     string private _uriPrefix;
 
     struct PhaseSpec {
+        bytes32 merkleRoot;
         uint256 supply;
         uint256 cost;
         uint256 maxAmountPerAddress;
         uint256 minted;
-        uint256 startTime;
-        uint256 endTime;
+        bool isOpen;
     }
 
     enum PhaseMint {
-        publicMint,
+        fcfs,
         freeMint,
         reserve,
-        guaranteed,
-        fcfs
+        guaranteed
     }
 
     mapping(PhaseMint => PhaseSpec) public feature;
     mapping(address => mapping(PhaseMint => uint256)) private _addressClaim;
     mapping(uint256 => bool) private _tokenLocked;
 
-    constructor(
-        string memory _hiddenMetadataUri,
-        uint256 _timeTokenLocked
-    ) ERC721r("Testing-LOG", "TLOG", MAX_SUPPLY) {
-        _hiddenMetadata = _hiddenMetadataUri;
-        setDurationTokenLock_JwA(_timeTokenLocked);
+    event Locked(uint256 tokenId);
 
-        feature[PhaseMint.publicMint] = PhaseSpec({
+    constructor(
+        string memory _hiddenMetadataUri
+    ) ERC721A("Testing-LOG", "TLOG") {
+        _hiddenMetadata = _hiddenMetadataUri;
+
+        feature[PhaseMint.fcfs] = PhaseSpec({
+            merkleRoot: 0,
             supply: 1,
-            cost: 0.045 ether,
-            maxAmountPerAddress: 6,
-            startTime: 1,
-            endTime: 1,
+            cost: 0.034 ether,
+            maxAmountPerAddress: 2,
+            isOpen: false,
             minted: 1
         });
 
         feature[PhaseMint.freeMint] = PhaseSpec({
+            merkleRoot: 0,
             supply: 333,
             cost: 0,
             maxAmountPerAddress: 1,
-            startTime: 1,
-            endTime: 1,
+            isOpen: false,
             minted: 1
         });
 
         feature[PhaseMint.reserve] = PhaseSpec({
+            merkleRoot: 0,
             supply: 1500,
             cost: 0.024 ether,
             maxAmountPerAddress: 2,
-            startTime: 1,
-            endTime: 1,
+            isOpen: false,
             minted: 1
         });
 
         feature[PhaseMint.guaranteed] = PhaseSpec({
+            merkleRoot: 0,
             supply: 3000,
             cost: 0.024 ether,
             maxAmountPerAddress: 2,
-            startTime: 1,
-            endTime: 1,
-            minted: 1
-        });
-
-        feature[PhaseMint.fcfs] = PhaseSpec({
-            supply: 1,
-            cost: 0.034 ether,
-            maxAmountPerAddress: 2,
-            startTime: 1,
-            endTime: 1,
+            isOpen: false,
             minted: 1
         });
     }
@@ -111,10 +102,13 @@ contract TestingLOG is ERC721r, Ownable {
     // ===================================================================
     //                            MODIFIER
     // ===================================================================
-    modifier mintCompliance_d7A(PhaseMint _phase, uint256 _mintAmount) {
+    modifier mintCompliance(PhaseMint _phase, uint256 _mintAmount) {
         uint256 _maxAmountPerAddress = feature[_phase].maxAmountPerAddress;
         uint256 _supply = feature[_phase].supply;
-        uint256 _totalMinted = feature[_phase].minted + _mintAmount;
+        if (pauseContract) revert ContractIsPause();
+        if (!feature[_phase].isOpen) {
+            revert MintingPhaseClose();
+        }
         if (_mintAmount < 1 || _mintAmount > _maxAmountPerAddress) {
             revert InvalidMintAmount();
         }
@@ -127,147 +121,132 @@ contract TestingLOG is ERC721r, Ownable {
         ) {
             revert ExceedeedTokenClaiming();
         }
-        if (_totalMinted - 1 > _supply) {
-            revert SupplyExceedeed();
-        }
-        _addressClaim[msg.sender][_phase] += _mintAmount;
-        feature[_phase].minted = _totalMinted;
-        _;
-    }
-
-    modifier isOpen_n6F(PhaseMint _phase) {
-        if (pauseContract) revert ContractIsPause();
-        if (
-            block.timestamp < feature[_phase].startTime ||
-            block.timestamp > feature[_phase].endTime
-        ) {
-            revert MintingPhaseClose();
-        }
-        _;
-    }
-
-    modifier checkCost_Qo_(PhaseMint _phase, uint256 _mintAmount) {
         if (msg.value < _mintAmount * feature[_phase].cost) {
             revert InsufficientFunds();
         }
+        if ((feature[_phase].minted + _mintAmount) - 1 > _supply) {
+            revert SupplyExceedeed();
+        }
         _;
     }
 
-    modifier checkMintPhase_prD(PhaseMint _phase) {
-        if (_phase == PhaseMint.freeMint || _phase == PhaseMint.reserve)
+    modifier checkWhitelistMintPhase(PhaseMint _phase) {
+        if (_phase == PhaseMint.fcfs) {
             revert WrongInputPhase();
+        }
         _;
     }
 
     // ===================================================================
     //                                MINT
     // ===================================================================
-    function freeMinting_jW()
-        external
-        isOpen_n6F(PhaseMint.freeMint)
-        mintCompliance_d7A(PhaseMint.freeMint, 1)
-    {
-        uint256 _tokenId = getRandomIndex(msg.sender);
-        _tokenLocked[_tokenId] = true;
-        _mintAtIndex(msg.sender, _tokenId);
-    }
-
-    function reserve_Jm7(
-        uint256 amountReserve
-    )
-        external
-        payable
-        isOpen_n6F(PhaseMint.reserve)
-        checkCost_Qo_(PhaseMint.reserve, amountReserve)
-        mintCompliance_d7A(PhaseMint.reserve, amountReserve)
-    {}
-
-    function mintPhase_d7v(
+    function whitelistMint(
         PhaseMint _phase,
-        uint256 mintAmount
+        uint256 mintAmount,
+        bytes32[] calldata _merkleProof
     )
         external
         payable
-        checkMintPhase_prD(_phase)
-        isOpen_n6F(_phase)
-        checkCost_Qo_(_phase, mintAmount)
-        mintCompliance_d7A(_phase, mintAmount)
+        checkWhitelistMintPhase(_phase)
+        mintCompliance(_phase, mintAmount)
     {
-        _mintRandom(msg.sender, mintAmount);
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
+        if (
+            !MerkleProof.verify(_merkleProof, feature[_phase].merkleRoot, leaf)
+        ) {
+            revert InvalidProof();
+        }
+        _addressClaim[msg.sender][_phase] += mintAmount;
+        feature[_phase].minted += mintAmount;
+        if (_phase == PhaseMint.freeMint) {
+            uint256 _tokenId = totalSupply();
+            _tokenLocked[_tokenId] = true;
+        }
+        if (_phase == PhaseMint.reserve) {
+            return;
+        }
+        _safeMint(msg.sender, mintAmount);
     }
 
-    function claimReverse_To$() external isOpen_n6F(PhaseMint.fcfs) {
+    function mintPublic(
+        uint256 mintAmount
+    ) external payable mintCompliance(PhaseMint.fcfs, mintAmount) {
+        _addressClaim[msg.sender][PhaseMint.fcfs] += mintAmount;
+        feature[PhaseMint.fcfs].minted += mintAmount;
+        _safeMint(msg.sender, mintAmount);
+    }
+
+    function claimReserve() external {
+        if (!feature[PhaseMint.fcfs].isOpen) revert MintingPhaseClose();
         uint256 _tokenReserve = _addressClaim[msg.sender][PhaseMint.reserve];
         if (_tokenReserve == 0) revert AddressAlreadyClaimOrNotReserve();
         _addressClaim[msg.sender][PhaseMint.reserve] = 0;
-        _mintRandom(msg.sender, _tokenReserve);
+        feature[PhaseMint.reserve].minted -= _tokenReserve;
+        _safeMint(msg.sender, _tokenReserve);
     }
 
-    function airdrops_19M(address to, uint256 mintAmount) external onlyOwner {
-        _mintRandom(to, mintAmount);
+    function airdrops(address to, uint256 mintAmount) external onlyOwner {
+        _safeMint(to, mintAmount);
     }
 
     // ===================================================================
     //                          OWNER FUNCTION
     // ===================================================================
-    function setDurationTokenLock_JwA(uint256 _duration) public onlyOwner {
-        _timeTokenLock = block.timestamp + _duration;
+    function setTokenLock(bool toggle) public onlyOwner {
+        _tokenLock = toggle;
     }
 
-    function startMintingPhase__QF() external onlyOwner {
-        feature[PhaseMint.freeMint].startTime = block.timestamp;
-        feature[PhaseMint.freeMint].endTime = block.timestamp + 12 hours;
-        feature[PhaseMint.reserve].startTime = feature[PhaseMint.freeMint].endTime;
-        feature[PhaseMint.reserve].endTime = block.timestamp + 14 hours;
-        feature[PhaseMint.guaranteed].startTime = feature[PhaseMint.reserve].endTime;
-        feature[PhaseMint.guaranteed].endTime = block.timestamp + 16 hours;
+    function setMerkleRoot(
+        PhaseMint _phase,
+        bytes32 merkleRoot
+    ) external onlyOwner checkWhitelistMintPhase(_phase) {
+        feature[_phase].merkleRoot = merkleRoot;
     }
 
-    function startMintingFcfs_Tg_() external onlyOwner {
-        uint256 alreadyMinted = totalSupply();
-        uint256 tokenReserve = feature[PhaseMint.reserve].minted - 1;
-        feature[PhaseMint.fcfs].supply = MAX_SUPPLY - (alreadyMinted + tokenReserve);
-        feature[PhaseMint.fcfs].startTime = block.timestamp;
-        feature[PhaseMint.fcfs].endTime = block.timestamp + 2 hours;
+    function openWhitelistMint(
+        PhaseMint _phase,
+        bool toggle
+    ) external onlyOwner checkWhitelistMintPhase(_phase) {
+        feature[_phase].isOpen = toggle;
     }
 
-    function startMintingPublic_e68(uint256 _duration) external onlyOwner {
-        uint256 alreadyMinted = totalSupply();
-        feature[PhaseMint.publicMint].supply = MAX_SUPPLY - alreadyMinted;
-        feature[PhaseMint.publicMint].startTime = block.timestamp;
-        feature[PhaseMint.publicMint].endTime = block.timestamp + _duration;
+    function openPublictMint(bool toggle) external onlyOwner {
+        if (toggle) {
+            uint256 _totalSupply = totalSupply();
+            uint256 _reserveMint = feature[PhaseMint.reserve].minted;
+            uint256 _setSupply = MAX_SUPPLY - (_totalSupply + (_reserveMint - 1));
+
+            feature[PhaseMint.fcfs].isOpen = true;
+            feature[PhaseMint.fcfs].supply = _setSupply;
+            return;
+        }
+        feature[PhaseMint.fcfs].isOpen = false;
     }
 
-    function setPauseContract_YlV(bool _state) external onlyOwner {
+    function setPauseContract(bool _state) external onlyOwner {
         pauseContract = _state;
     }
 
-    function setCostPublicMint_vrO(uint256 _newCost) external onlyOwner {
-        feature[PhaseMint.publicMint].cost = _newCost;
-    }
-
-    function setHiddenMetadata_78Q(
+    function setHiddenMetadata(
         string memory _hiddenMetadataUri
     ) external onlyOwner {
         _hiddenMetadata = _hiddenMetadataUri;
     }
 
-    function setBaseUri_c7$(string memory _newUriPrefix) external onlyOwner {
+    function setBaseUri(string memory _newUriPrefix) external onlyOwner {
         _uriPrefix = _newUriPrefix;
     }
 
-    function setRevealed_I4w(bool _state) external onlyOwner {
+    function setRevealed(bool _state) external onlyOwner {
         _revealed = _state;
     }
 
-    function withdraw_wdp() external onlyOwner {
+    function withdraw() external onlyOwner {
         if (!pauseContract) revert ContractIsNotPause();
         uint256 balance = address(this).balance;
         if (balance == 0) revert InsufficientFunds();
-        Address.sendValue(
-            payable(0x21d1E1577689550148722737aEB0aE6935941aaa),
-            balance
-        );
+        (bool os, ) = payable(owner()).call{value: address(this).balance}("");
+        require(os);
     }
 
     // ===================================================================
@@ -275,7 +254,7 @@ contract TestingLOG is ERC721r, Ownable {
     // ===================================================================
     function tokenURI(
         uint256 _tokenId
-    ) public view virtual override returns (string memory) {
+    ) public view virtual override(ERC721A) returns (string memory) {
         if (!_exists(_tokenId)) revert NonExistToken();
         if (!_revealed) return _hiddenMetadata;
         string memory currentBaseURI = _baseURI();
@@ -284,7 +263,7 @@ contract TestingLOG is ERC721r, Ownable {
                 ? string(
                     abi.encodePacked(
                         currentBaseURI,
-                        _tokenId.toString(),
+                        _toString(_tokenId),
                         ".json"
                     )
                 )
@@ -295,20 +274,28 @@ contract TestingLOG is ERC721r, Ownable {
         return _uriPrefix;
     }
 
-    function _beforeTokenTransfer(
+    function _startTokenId() internal view virtual override returns (uint256) {
+        return 1;
+    }
+
+    // need improvement
+    function _beforeTokenTransfers(
         address from,
         address to,
-        uint256 tokenId
-    ) internal override(ERC721r) {
+        uint256 startTokenId,
+        uint256 quantity
+    ) internal override(ERC721A) {
         if (from != address(0)) {
-            if (_tokenLocked[tokenId] && block.timestamp < _timeTokenLock) {
+            if (_tokenLocked[startTokenId] && _tokenLock) {
+                emit Locked(startTokenId);
                 revert TokenLocked();
             }
         }
-        super._beforeTokenTransfer(from, to, tokenId);
-    }
-
-    function exists(uint256 tokenId) public view returns (bool) {
-        return _exists(tokenId);
+        super._beforeTokenTransfers(from, to, startTokenId, quantity);
     }
 }
+
+// gasss eficientcy
+// unchecked
+// supply public
+// token locked

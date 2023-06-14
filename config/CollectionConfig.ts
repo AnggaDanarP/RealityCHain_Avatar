@@ -1,9 +1,9 @@
 import CollectionConfigInterface from "../lib/CollectionConfigInterface";
 import * as Networks from "../lib/Networks";
 import * as Marketpalce from "../lib/Marketplaces";
-import whitelistAddress from "./whitelist.json";
-import refunder from "./refund.json";
-import airdrops from "./giftMint.json";
+import freeMint from "./freeMint.json";
+import reserve from "./reserve.json";
+import guaranted from "./guarantedd.json";
 
 function getTimestampForFutureDate(daysToAdd: number): number {
     const timestamp = daysToAdd * 24 * 60 * 60;
@@ -11,17 +11,17 @@ function getTimestampForFutureDate(daysToAdd: number): number {
   }
 
 const CollectionConfig: CollectionConfigInterface = {
-    testnet: Networks.ethereumTest,
+    testnet: Networks.polygonTestnet,
     mainnet: Networks.ethereumMainnet,
     contractName: "TestingLOG",
     durationLockToken: getTimestampForFutureDate(7),
-    hiddenMetadata: "ipfs://QmdsoAhzoLeiTfsd518WGgVBYV6Ld9BfrrRnTh4orLjHfG/hidden.json",
-    contractAddress: "0xca33D3b32dBCA203d022a719Dea64C2521141775",
+    hiddenMetadata: "ipfs://QmbygiS9xLr2dDsRUDGSNYoDATGai1YQ2xnUFqwVczzn5j/LOG.json",
+    contractAddress: "0x64761dcD6A7514ce29dB4433F7978c82c614065D",
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
-    whiteListAddresses: whitelistAddress, // on changes
-    refundAddress: refunder,
-    addressAirdrops: airdrops
+    freeMintAddress: freeMint, // on changes
+    reserveAddress: reserve,
+    guarantedAddress: guaranted
 };
 
 export default CollectionConfig;

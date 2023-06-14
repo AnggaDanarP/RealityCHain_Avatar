@@ -36,28 +36,28 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
   }
 });
 
-task('generate-root-hash', 'Generates and prints out the root hash for the current whitelist', async () => {
+task('generate-root-hash-free-mint', 'Generates and prints out the root hash for the current free mint address', async () => {
   // Check configuration
-  if (CollectionConfig.whiteListAddresses.length < 1) {
+  if (CollectionConfig.freeMintAddress.length < 1) {
     throw 'The whitelist is empty, please add some addresses to the configuration.';
   }
 
   // Build the Merkle Tree
-  const leafNodes = CollectionConfig.whiteListAddresses.map(addr => keccak256(addr));
+  const leafNodes = CollectionConfig.freeMintAddress.map(addr => keccak256(addr));
   const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
   const rootHash = '0x' + merkleTree.getRoot().toString('hex');
 
   console.log('The Merkle Tree root hash for the current whitelist is: ' + rootHash);
 });
 
-task('generate-proof', 'Generates and prints out the whitelist proof for the given address (compatible with block explorers such as Etherscan)', async (taskArgs: {address: string}) => {
+task('generate-proof-free-mint', 'Generates and prints out the whitelist proof for the given address (compatible with block explorers such as Etherscan)', async (taskArgs: {address: string}) => {
   // Check configuration
-  if (CollectionConfig.whiteListAddresses.length < 1) {
+  if (CollectionConfig.freeMintAddress.length < 1) {
     throw 'The whitelist is empty, please add some addresses to the configuration.';
   }
 
   // Build the Merkle Tree
-  const leafNodes = CollectionConfig.whiteListAddresses.map(addr => keccak256(addr));
+  const leafNodes = CollectionConfig.freeMintAddress.map(addr => keccak256(addr));
   const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
   const proof = merkleTree.getHexProof(keccak256(taskArgs.address)).toString().replace(/'/g, '').replace(/ /g, '');
 
@@ -65,28 +65,57 @@ task('generate-proof', 'Generates and prints out the whitelist proof for the giv
 })
 .addPositionalParam('address', 'The public address');
 
-task('generate-root-refund', 'Generates and prints out the root hash for the current refund', async () => {
+task('generate-root-reserve', 'Generates and prints out the root hash for the current reserve', async () => {
   // Check configuration
-  if (CollectionConfig.refundAddress.length < 1) {
+  if (CollectionConfig.reserveAddress.length < 1) {
     throw 'The whitelist is empty, please add some addresses to the configuration.';
   }
 
   // Build the Merkle Tree
-  const leafNodes = CollectionConfig.refundAddress.map(addr => keccak256(addr));
+  const leafNodes = CollectionConfig.reserveAddress.map(addr => keccak256(addr));
   const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
   const rootHash = '0x' + merkleTree.getRoot().toString('hex');
 
   console.log('The Merkle Tree root hash for the current whitelist is: ' + rootHash);
 });
 
-task('generate-proof-refund', 'Generates and prints out the refund proof for the given address (compatible with block explorers such as Etherscan)', async (taskArgs: {address: string}) => {
+task('generate-proof-reserve', 'Generates and prints out the reserve proof for the given address (compatible with block explorers such as Etherscan)', async (taskArgs: {address: string}) => {
   // Check configuration
-  if (CollectionConfig.refundAddress.length < 1) {
+  if (CollectionConfig.reserveAddress.length < 1) {
     throw 'The whitelist is empty, please add some addresses to the configuration.';
   }
 
   // Build the Merkle Tree
-  const leafNodes = CollectionConfig.refundAddress.map(addr => keccak256(addr));
+  const leafNodes = CollectionConfig.reserveAddress.map(addr => keccak256(addr));
+  const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
+  const proof = merkleTree.getHexProof(keccak256(taskArgs.address)).toString().replace(/'/g, '').replace(/ /g, '');
+
+  console.log('The whitelist proof for the given address is: ' + proof);
+})
+.addPositionalParam('address', 'The public address');
+
+task('generate-root-guaranteed', 'Generates and prints out the root hash for the current guaranteed', async () => {
+  // Check configuration
+  if (CollectionConfig.guarantedAddress.length < 1) {
+    throw 'The whitelist is empty, please add some addresses to the configuration.';
+  }
+
+  // Build the Merkle Tree
+  const leafNodes = CollectionConfig.guarantedAddress.map(addr => keccak256(addr));
+  const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
+  const rootHash = '0x' + merkleTree.getRoot().toString('hex');
+
+  console.log('The Merkle Tree root hash for the current whitelist is: ' + rootHash);
+});
+
+task('generate-proof-guaranteed', 'Generates and prints out the guaranteed proof for the given address (compatible with block explorers such as Etherscan)', async (taskArgs: {address: string}) => {
+  // Check configuration
+  if (CollectionConfig.guarantedAddress.length < 1) {
+    throw 'The whitelist is empty, please add some addresses to the configuration.';
+  }
+
+  // Build the Merkle Tree
+  const leafNodes = CollectionConfig.guarantedAddress.map(addr => keccak256(addr));
   const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
   const proof = merkleTree.getHexProof(keccak256(taskArgs.address)).toString().replace(/'/g, '').replace(/ /g, '');
 
