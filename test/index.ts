@@ -46,6 +46,9 @@ describe(CollectionConfig.contractName, function () {
   let whitelistUser!: SignerWithAddress;
   let publicAddress!: SignerWithAddress;
   let unkownUser!: SignerWithAddress;
+  let tokenLocked: number;
+  let from: any;
+  let to: any;
 
   before(async function () {
     [
@@ -54,6 +57,9 @@ describe(CollectionConfig.contractName, function () {
       publicAddress,
       unkownUser
     ] = await ethers.getSigners();
+
+    from = await whitelistUser.getAddress();
+    to = await unkownUser.getAddress();
   });
 
   it("Contract deployment", async function () {
@@ -253,17 +259,14 @@ describe(CollectionConfig.contractName, function () {
     // keep tracking that there is no token ID = 0
     await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
 
-    // const from = await freeMintUser.getAddress();
-    // const to = await reserveUser.getAddress();
-
-    // for (let i = 1; i < 5555; i++) {
-    //   if (await contract.ownerOf(i) == await freeMintUser.getAddress()) {
-    //     await expect(
-    //       contract.connect(freeMintUser).transferFrom(from, to, i)
-    //     ).to.be.revertedWith("TokenLocked()");
-    //     break;
-    //   }
-    // }
+    for (let i = 1; i < 5555; i++) {
+      if (await contract.ownerOf(i) == await whitelistUser.getAddress()) {
+        await expect(
+          contract.connect(whitelistUser).transferFrom(from, to, i)).to.be.revertedWith("TokenLocked()");
+        tokenLocked = i;
+        break;
+      }
+    }
   });
 
   it("reserve Phase", async function () {
@@ -557,175 +560,63 @@ describe(CollectionConfig.contractName, function () {
     await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
   });
 
-  // it("Public mint", async function () {
-  //   // error bacasue minting phase is close
-  //   await expect(
-  //     contract.connect(owner).freeMinting_jW()
-  //   ).to.be.revertedWith("MintingPhaseClose()");
+  it("Token URI generation", async function () {
+    // update again
+    const genesis = CollectionConfig.hiddenMetadata;
+    const uriPrefix = "ipfs://QmPheZWCLHygMQLQiRVmAWD4YZBcgLndC1V3ZGVW8AECkW/";
+    const uriSuffix = ".json";
+    const tokenAlreadyMinted = await contract.totalSupply();
 
-  //   await expect(
-  //     contract.connect(LogHolder4).reserve_Jm7(2, { value: getPrice("0.024", 2) })
-  //   ).to.be.revertedWith("MintingPhaseClose()");
+    for (let i = 1; i <= tokenAlreadyMinted.toNumber(); i++) {
+      expect(await contract.tokenURI(i)).to.equal(genesis);
+    }
 
-  //   await expect(
-  //     contract.connect(LogHolder4).mintPhase_d7v(3, 2, { value: getPrice("0.024", 2) })
-  //   ).to.be.revertedWith("MintingPhaseClose()");
+    // Reveal collection
+    await contract.setBaseUri(uriPrefix);
+    await contract.setRevealed(true);
 
-  //   await expect(
-  //     contract.connect(LogHolder4).mintPhase_d7v(4, 2, { value: getPrice("0.034", 2) })
-  //   ).to.be.revertedWith("MintingPhaseClose()");
+    // Testing first and last minted tokens
+    for (let i = 1; i <= tokenAlreadyMinted.toNumber(); i++) {
+      expect(await contract.tokenURI(i)).to.equal(`${uriPrefix}${i}${uriSuffix}`);
+    }
 
-  //   await expect(
-  //     contract.connect(LogHolder2).mintPhase_d7v(0, 2, { value: getPrice("0.045", 2) })
-  //   ).to.be.revertedWith("MintingPhaseClose()");
+    // keep tracking that there is no token ID = 0
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
+  });
 
-  //   await expect(
-  //     contract.connect(LogHolder4).claimReverse_To$()
-  //   ).to.be.revertedWith("MintingPhaseClose()");
-    
-  //   // turn of minting phase with 2 hours duration
-  //   await contract.startMintingPublic_e68(7200);
+  it("Token from free mint can treadable", async function () {
+    // token still locked
+    await expect(
+      contract.connect(whitelistUser).transferFrom(from, to, tokenLocked)
+    ).to.be.revertedWith("TokenLocked()");
 
-  //   // error
-  //   await expect(
-  //     contract.connect(LogHolder5).mintPhase_d7v(0, 7, { value: getPrice("0.045", 7) })
-  //   ).to.be.revertedWith("InvalidMintAmount()");
+    // unlocked the token
+    await contract.setTokenLock(false);
 
-  //   await expect(
-  //     contract.connect(LogHolder5).mintPhase_d7v(0, 0, { value: getPrice("0.045", 0) })
-  //   ).to.be.revertedWith("InvalidMintAmount()");
+    //success to transfer token
+    await contract.connect(whitelistUser).transferFrom(from, to, tokenLocked);
 
-  //   await expect(
-  //     contract.connect(LogHolder5).mintPhase_d7v(0, 2, { value: getPrice("0.034", 1) })
-  //   ).to.be.revertedWith("InsufficientFunds()");
+    // check balance 
+    expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
+    expect(await contract.balanceOf(await whitelistUser.getAddress())).to.equal(4);
+    expect(await contract.balanceOf(await publicAddress.getAddress())).to.equal(2);
+    expect(await contract.balanceOf(await unkownUser.getAddress())).to.equal(1);
+  });
 
-  //   await expect(
-  //     contract.connect(LogHolder5).mintPhase_d7v(1, 2, { value: getPrice("0.045", 1) })
-  //   ).to.be.revertedWith("WrongInputPhase()");
+  it("Withdraw", async function () {
+    // error couse contract is not pause
+    await expect(contract.connect(owner).withdraw()).to.be.revertedWith("ContractIsNotPause()");
 
-  //   await expect(
-  //     contract.connect(LogHolder5).mintPhase_d7v(2, 2, { value: getPrice("0.045", 1) })
-  //   ).to.be.revertedWith("WrongInputPhase()");
+    // turn off all the feature
+    await contract.setPauseContract(true);
 
-  //   // success 
-  //   await contract.connect(LogHolder5).mintPhase_d7v(0, 2, { value: getPrice("0.045", 2) });
+    // success
+    await contract.connect(owner).withdraw();
 
-  //   // fast forward the chain to 2 hours to check posibility
-  //   // await network.provider.send("evm_increaseTime", [72001]); // 72001 -> 7200 seconds = 2 hour + 1 seconds
-  //   // await network.provider.send("evm_mine");
+    // error = balance is 0
+    await expect(contract.connect(owner).withdraw()).to.be.revertedWith("InsufficientFunds()");
 
-  //   // mint amount is over max address have the NFT
-  //   await expect(
-  //     contract.connect(LogHolder5).mintPhase_d7v(0, 5, { value: getPrice("0.045", 5) })
-  //   ).to.be.revertedWith("ExceedeedTokenClaiming()");
-
-  //   // success 
-  //   await contract.connect(LogHolder5).mintPhase_d7v(0, 4, { value: getPrice("0.045", 4) });
-
-  //   // error couse already in max claim
-  //   await expect(
-  //     contract.connect(LogHolder5).mintPhase_d7v(0, 1, { value: getPrice("0.045", 1) })
-  //   ).to.be.revertedWith("AddressAlreadyMaxClaimed()");
-
-  //   // check supply
-  //   expect((await contract.feature(0)).minted).to.be.equal(7);
-  //   expect((await contract.feature(1)).minted).to.be.equal(2);
-  //   expect((await contract.feature(2)).minted).to.be.equal(5);
-  //   expect((await contract.feature(3)).minted).to.be.equal(3);
-  //   expect((await contract.feature(4)).minted).to.be.equal(3);
-  //   expect(await contract.totalSupply()).to.be.equal(14);
-
-  //   // check balance and all token already mint
-  //   expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
-  //   expect(await contract.balanceOf(await LogHolder1.getAddress())).to.equal(1);
-  //   expect(await contract.balanceOf(await LogHolder2.getAddress())).to.equal(2);
-  //   expect(await contract.balanceOf(await LogHolder3.getAddress())).to.equal(2);
-  //   expect(await contract.balanceOf(await LogHolder4.getAddress())).to.equal(2);
-  //   expect(await contract.balanceOf(await LogHolder5.getAddress())).to.equal(6);
-
-  //   // keep tract the token locked still can't be treadable
-  //   let from = await LogHolder1.getAddress();
-  //   let to = await owner.getAddress();
-
-  //   await expect(
-  //     contract.connect(LogHolder1).transferFrom(from, to, tokenLocked)
-  //   ).to.be.revertedWith("TokenLocked()");
-
-  //   // keep tracking that there is no token ID = 0
-  //   await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
-  // });
-
-  // it("Token URI generation", async function () {
-  //   // update again
-  //   const genesis = CollectionConfig.hiddenMetadata;
-  //   const uriPrefix = "ipfs://QmPheZWCLHygMQLQiRVmAWD4YZBcgLndC1V3ZGVW8AECkW/";
-  //   const uriSuffix = ".json";
-  //   let tokenAlreadyMinted = [];
-
-  //   // take the token ID that already mint
-  //   for (let i =  1; i <= 5555; i++) {
-  //     if (await contract.exists(i)) {
-  //       tokenAlreadyMinted.push(i);
-  //     }
-  //   }
-
-  //   for (let i = 0; i < tokenAlreadyMinted.length; i++) {
-  //     expect(await contract.tokenURI(tokenAlreadyMinted[i])).to.equal(genesis);
-  //   }
-
-  //   // Reveal collection
-  //   await contract.setBaseUri_c7$(uriPrefix);
-  //   await contract.setRevealed_I4w(true);
-
-  //   // Testing first and last minted tokens
-  //   for (let i = 0; i < tokenAlreadyMinted.length; i++) {
-  //     expect(await contract.tokenURI(tokenAlreadyMinted[i])).to.equal(`${uriPrefix}${tokenAlreadyMinted[i]}${uriSuffix}`);
-  //   }
-
-  //   // keep tracking that there is no token ID = 0
-  //   await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken()");
-  // });
-
-  // it("Token from free mint can treadable", async function () {
-  //   const from = await owner.getAddress();
-  //   const to = await LogHolder5.getAddress();
-
-  //   // token can transfer because token is not locked
-  //   await contract.connect(owner).transferFrom(from, to, tokenUnlocked);
-
-  //   await expect(
-  //     contract.connect(LogHolder1).transferFrom(await LogHolder1.getAddress(), to, tokenLocked)
-  //   ).to.be.revertedWith("TokenLocked()");
-
-  //   // fast forward the chain to 7 days to check posibility
-  //   await network.provider.send("evm_increaseTime", [604801]);
-  //   await network.provider.send("evm_mine");
-
-  //   // token is not locked again
-  //   // but still well revert an error
-  //   // becasue when holder mint the nft, holder not fully own the token
-  //   // this is the standard from ERC721
-  //   // and need to approve first from owner
-  //   // const currentBlock = await ethers.provider.getBlockNumber();
-  //   // const blockTimestamp = (await ethers.provider.getBlock(currentBlock)).timestamp;
-  //   // console.log(blockTimestamp);
-  //   await contract.connect(LogHolder1).transferFrom(await LogHolder1.getAddress(), to, tokenLocked);
-  // });
-
-  // it("Withdraw", async function () {
-  //   // error couse contract is not pause
-  //   await expect(contract.connect(owner).withdraw_wdp()).to.be.revertedWith("ContractIsNotPause()");
-
-  //   // turn off all the feature
-  //   await contract.setPauseContract_YlV(true);
-
-  //   // success
-  //   await contract.connect(owner).withdraw_wdp();
-
-  //   // error = balance is 0
-  //   await expect(contract.connect(owner).withdraw_wdp()).to.be.revertedWith("InsufficientFunds()");
-
-  // });
+  });
 
   // it("Refund", async function () {
   //   // set up merkleRoot for refund

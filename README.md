@@ -8,7 +8,7 @@ This is a Smart contract NFT project that using minting random concept using [ER
 4. FCFS: Like the public minting feature, this feature is also like normal minting but has a higher price.
 5. Claiming Reserve: This feature is only open on FCFS where addresses that have reserved before can claim tokens for the number of tokens that were reserved.
 6. Airdrop: This function is only performed by the owner who can provide tokens to the specified address and then supply them based on the minting phase determined by the owner.
-7. Public mint: This feature will be opened if it is needed under certain conditions by the owner.
+
 
 ## Getting Started
 

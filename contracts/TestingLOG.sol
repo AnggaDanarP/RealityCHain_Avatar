@@ -12,6 +12,7 @@ import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+// import "@openzeppelin/contracts/utils/Strings.sol";
 
 error AddressAlreadyMaxClaimed();
 error MintingPhaseClose();
@@ -30,10 +31,10 @@ error InvalidProof();
 contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     bool private pauseContract = true;
     bool private _revealed = false;
-    bool private _tokenLock = true;
+    bool private _toggleTokenLock = true;
     uint256 private constant MAX_SUPPLY = 5555;
-    string private _hiddenMetadata;
-    string private _uriPrefix;
+    string private _hiddenMetadata = "";
+    string private _uriPrefix = "";
 
     struct PhaseSpec {
         bytes32 merkleRoot;
@@ -102,39 +103,39 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     // ===================================================================
     //                            MODIFIER
     // ===================================================================
-    modifier mintCompliance(PhaseMint _phase, uint256 _mintAmount) {
-        uint256 _maxAmountPerAddress = feature[_phase].maxAmountPerAddress;
-        uint256 _supply = feature[_phase].supply;
+    function _mintCompliance(
+        PhaseMint _phase,
+        uint256 _mintAmount
+    ) private view {
         if (pauseContract) revert ContractIsPause();
         if (!feature[_phase].isOpen) {
             revert MintingPhaseClose();
         }
+        uint256 _maxAmountPerAddress = feature[_phase].maxAmountPerAddress;
         if (_mintAmount < 1 || _mintAmount > _maxAmountPerAddress) {
             revert InvalidMintAmount();
         }
-        if (_addressClaim[msg.sender][_phase] == _maxAmountPerAddress) {
+        uint256 _holderAmount = _addressClaim[msg.sender][_phase];
+        if (_holderAmount == _maxAmountPerAddress) {
             revert AddressAlreadyMaxClaimed();
         }
-        if (
-            _addressClaim[msg.sender][_phase] + _mintAmount >
-            _maxAmountPerAddress
-        ) {
+        if (_holderAmount + _mintAmount > _maxAmountPerAddress) {
             revert ExceedeedTokenClaiming();
         }
-        if (msg.value < _mintAmount * feature[_phase].cost) {
+        uint256 _cost = feature[_phase].cost;
+        if (msg.value < _mintAmount * _cost) {
             revert InsufficientFunds();
         }
+        uint256 _supply = feature[_phase].supply;
         if ((feature[_phase].minted + _mintAmount) - 1 > _supply) {
             revert SupplyExceedeed();
         }
-        _;
     }
 
-    modifier checkWhitelistMintPhase(PhaseMint _phase) {
+    function _checkWhitelistMintPhase(PhaseMint _phase) private pure {
         if (_phase == PhaseMint.fcfs) {
             revert WrongInputPhase();
         }
-        _;
     }
 
     // ===================================================================
@@ -144,12 +145,9 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         PhaseMint _phase,
         uint256 mintAmount,
         bytes32[] calldata _merkleProof
-    )
-        external
-        payable
-        checkWhitelistMintPhase(_phase)
-        mintCompliance(_phase, mintAmount)
-    {
+    ) external payable {
+        _checkWhitelistMintPhase(_phase);
+        _mintCompliance(_phase, mintAmount);
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
         if (
             !MerkleProof.verify(_merkleProof, feature[_phase].merkleRoot, leaf)
@@ -159,7 +157,7 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         _addressClaim[msg.sender][_phase] += mintAmount;
         feature[_phase].minted += mintAmount;
         if (_phase == PhaseMint.freeMint) {
-            uint256 _tokenId = totalSupply();
+            uint256 _tokenId = totalSupply() + 1;
             _tokenLocked[_tokenId] = true;
         }
         if (_phase == PhaseMint.reserve) {
@@ -168,9 +166,8 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         _safeMint(msg.sender, mintAmount);
     }
 
-    function mintPublic(
-        uint256 mintAmount
-    ) external payable mintCompliance(PhaseMint.fcfs, mintAmount) {
+    function mintPublic(uint256 mintAmount) external payable {
+        _mintCompliance(PhaseMint.fcfs, mintAmount);
         _addressClaim[msg.sender][PhaseMint.fcfs] += mintAmount;
         feature[PhaseMint.fcfs].minted += mintAmount;
         _safeMint(msg.sender, mintAmount);
@@ -192,21 +189,23 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     // ===================================================================
     //                          OWNER FUNCTION
     // ===================================================================
-    function setTokenLock(bool toggle) public onlyOwner {
-        _tokenLock = toggle;
+    function setTokenLock(bool toggle) external onlyOwner {
+        _toggleTokenLock = toggle;
     }
 
     function setMerkleRoot(
         PhaseMint _phase,
         bytes32 merkleRoot
-    ) external onlyOwner checkWhitelistMintPhase(_phase) {
+    ) external onlyOwner {
+        _checkWhitelistMintPhase(_phase);
         feature[_phase].merkleRoot = merkleRoot;
     }
 
     function openWhitelistMint(
         PhaseMint _phase,
         bool toggle
-    ) external onlyOwner checkWhitelistMintPhase(_phase) {
+    ) external onlyOwner {
+        _checkWhitelistMintPhase(_phase);
         feature[_phase].isOpen = toggle;
     }
 
@@ -223,8 +222,8 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         feature[PhaseMint.fcfs].isOpen = false;
     }
 
-    function setPauseContract(bool _state) external onlyOwner {
-        pauseContract = _state;
+    function setPauseContract(bool _toggle) external onlyOwner {
+        pauseContract = _toggle;
     }
 
     function setHiddenMetadata(
@@ -237,8 +236,8 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         _uriPrefix = _newUriPrefix;
     }
 
-    function setRevealed(bool _state) external onlyOwner {
-        _revealed = _state;
+    function setRevealed(bool _toggle) external onlyOwner {
+        _revealed = _toggle;
     }
 
     function withdraw() external onlyOwner {
@@ -278,15 +277,14 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         return 1;
     }
 
-    // need improvement
     function _beforeTokenTransfers(
         address from,
         address to,
         uint256 startTokenId,
         uint256 quantity
     ) internal override(ERC721A) {
-        if (from != address(0)) {
-            if (_tokenLocked[startTokenId] && _tokenLock) {
+        if (from > address(0)) {
+            if (_tokenLocked[startTokenId] && _toggleTokenLock) {
                 emit Locked(startTokenId);
                 revert TokenLocked();
             }
@@ -294,8 +292,3 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         super._beforeTokenTransfers(from, to, startTokenId, quantity);
     }
 }
-
-// gasss eficientcy
-// unchecked
-// supply public
-// token locked
