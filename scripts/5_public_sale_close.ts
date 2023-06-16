@@ -6,7 +6,7 @@ async function main() {
 
     // Unpause the contract (if needed)
     console.log('Unpausing the contract...');
-    await (await contract.openPublictMint(4, false, 50)).wait();
+    await (await contract.openPublictMint(false)).wait();
 
     console.log('Public sale is now close!');
 }
