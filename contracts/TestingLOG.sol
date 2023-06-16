@@ -213,7 +213,8 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         if (toggle) {
             uint256 _totalSupply = totalSupply();
             uint256 _reserveMint = feature[PhaseMint.reserve].minted;
-            uint256 _setSupply = MAX_SUPPLY - (_totalSupply + (_reserveMint - 1));
+            uint256 _maxSupply = MAX_SUPPLY;
+            uint256 _setSupply = _maxSupply - (_totalSupply + (_reserveMint - 1));
 
             feature[PhaseMint.fcfs].isOpen = true;
             feature[PhaseMint.fcfs].supply = _setSupply;
@@ -240,10 +241,10 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         _revealed = _toggle;
     }
 
-    function withdraw() external onlyOwner {
+    function withdraw() external onlyOwner nonReentrant {
         if (!pauseContract) revert ContractIsNotPause();
         uint256 balance = address(this).balance;
-        if (balance == 0) revert InsufficientFunds();
+        if (balance == 0 ether) revert InsufficientFunds();
         (bool os, ) = payable(owner()).call{value: address(this).balance}("");
         require(os);
     }
@@ -284,7 +285,7 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         uint256 quantity
     ) internal override(ERC721A) {
         if (from > address(0)) {
-            if (_tokenLocked[startTokenId] && _toggleTokenLock) {
+            if (_toggleTokenLock && _tokenLocked[startTokenId]) {
                 emit Locked(startTokenId);
                 revert TokenLocked();
             }

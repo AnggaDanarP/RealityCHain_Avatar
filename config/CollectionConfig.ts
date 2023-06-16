@@ -16,7 +16,7 @@ const CollectionConfig: CollectionConfigInterface = {
     contractName: "TestingLOG",
     durationLockToken: getTimestampForFutureDate(7),
     hiddenMetadata: "ipfs://QmbygiS9xLr2dDsRUDGSNYoDATGai1YQ2xnUFqwVczzn5j/LOG.json",
-    contractAddress: "0x64761dcD6A7514ce29dB4433F7978c82c614065D",
+    contractAddress: "0x840aFB1587D22ADd766475A78c66e9B12296d8eb",
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
     freeMintAddress: freeMint, // on changes

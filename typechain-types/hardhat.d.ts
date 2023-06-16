@@ -17,14 +17,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Ownable__factory>;
     getContractFactory(
-      name: "PullPayment",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.PullPayment__factory>;
-    getContractFactory(
-      name: "Escrow",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.Escrow__factory>;
-    getContractFactory(
       name: "TestingLOG",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TestingLOG__factory>;
@@ -46,16 +38,6 @@ declare module "hardhat/types/runtime" {
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.Ownable>;
-    getContractAt(
-      name: "PullPayment",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.PullPayment>;
-    getContractAt(
-      name: "Escrow",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.Escrow>;
     getContractAt(
       name: "TestingLOG",
       address: string,
