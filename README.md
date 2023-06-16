@@ -56,6 +56,13 @@ You can start copiying the file and modifying `.env.example`. The file must be r
     the output will show the link to [etherscan](https://rinkeby.etherscan.io/)
 
 ###### Dont forget to close the feature to make your smart contract save 
+
+## Change it before deploy in mainet
+1. private key
+2. Block explorer API to Ethereum
+3. check the prefix and hidden metadata
+4. name token and symbol
+4. address to withdrawal
     
 
 

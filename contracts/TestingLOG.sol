@@ -6,13 +6,12 @@ SPDX-License-Identifier: MIT
 ██      ██      ██   ██ ██    ██ ██    ██ ██          ██    ██ ██          ██    ██ ██    ██ ██   ██ ██   ██ ██   ██ ██ ██   ██ ██  ██ ██      ██ 
 ███████ ███████ ██   ██  ██████   ██████  ███████      ██████  ██           ██████   ██████  ██   ██ ██   ██ ██████  ██ ██   ██ ██   ████ ███████ 
 */
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-// import "@openzeppelin/contracts/utils/Strings.sol";
 
 error AddressAlreadyMaxClaimed();
 error MintingPhaseClose();
@@ -244,7 +243,7 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     function withdraw() external onlyOwner nonReentrant {
         if (!pauseContract) revert ContractIsNotPause();
         uint256 balance = address(this).balance;
-        if (balance == 0 ether) revert InsufficientFunds();
+        if (balance < 0 ether) revert InsufficientFunds();
         (bool os, ) = payable(owner()).call{value: address(this).balance}("");
         require(os);
     }
