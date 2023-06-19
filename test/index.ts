@@ -135,7 +135,7 @@ describe(CollectionConfig.contractName, function () {
     ).to.be.revertedWith("ContractIsPause()");
 
     await expect(
-      contract.connect(whitelistUser).claimReserve()
+      contract.connect(whitelistUser).claimReserve([])
     ).to.be.revertedWith("MintingPhaseClose()");
 
     await expect(contract.withdraw()).to.be.revertedWith("InsufficientFunds()");
@@ -219,7 +219,7 @@ describe(CollectionConfig.contractName, function () {
     ).to.be.revertedWith("MintingPhaseClose()");
 
     await expect(
-      contract.connect(whitelistUser).claimReserve()
+      contract.connect(whitelistUser).claimReserve([])
     ).to.be.revertedWith("MintingPhaseClose()");
 
     // setup merkel root for free mint
@@ -294,7 +294,7 @@ describe(CollectionConfig.contractName, function () {
     ).to.be.revertedWith("MintingPhaseClose()");
 
     await expect(
-      contract.connect(whitelistUser).claimReserve()
+      contract.connect(whitelistUser).claimReserve([])
     ).to.be.revertedWith("MintingPhaseClose()");
 
     // error
@@ -380,7 +380,7 @@ describe(CollectionConfig.contractName, function () {
     ).to.be.revertedWith("MintingPhaseClose()");
 
     await expect(
-      contract.connect(whitelistUser).claimReserve()
+      contract.connect(whitelistUser).claimReserve([])
     ).to.be.revertedWith("MintingPhaseClose()");
 
     // error
@@ -518,18 +518,22 @@ describe(CollectionConfig.contractName, function () {
 
   it("Claim NFT from Reserve", async function () {
 
-    // error because address not reserve token
+    // setup merkel root for free mint
+    const leafNodes = whitelistAddresses.map(addr => keccak256(addr));
+    const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
+
+    // check merklerooot
     await expect(
-      contract.connect(unkownUser).claimReserve()
-    ).to.be.revertedWith("AddressAlreadyClaimOrNotReserve()");
+      contract.connect(unkownUser).claimReserve(merkleTree.getHexProof(keccak256(await unkownUser.getAddress())))
+    ).to.be.revertedWith("InvalidProof()");
 
     // success claim and automatically claim total token has reserve
-    await contract.connect(whitelistUser).claimReserve();
+    await contract.connect(whitelistUser).claimReserve(merkleTree.getHexProof(keccak256(await whitelistUser.getAddress())));
 
     // error claim twice
     await expect(
-      contract.connect(whitelistUser).claimReserve()
-    ).to.be.revertedWith("AddressAlreadyClaimOrNotReserve()");
+      contract.connect(whitelistUser).claimReserve(merkleTree.getHexProof(keccak256(await whitelistUser.getAddress())))
+    ).to.be.revertedWith("AddressAlreadyClaim()");
 
     await contract.openPublictMint(false);
 
@@ -539,7 +543,7 @@ describe(CollectionConfig.contractName, function () {
     ).to.be.revertedWith("MintingPhaseClose()");
 
     await expect(
-      contract.connect(whitelistUser).claimReserve()
+      contract.connect(whitelistUser).claimReserve(merkleTree.getHexProof(keccak256(await whitelistUser.getAddress())))
     ).to.be.revertedWith("MintingPhaseClose()");
 
     // check supply

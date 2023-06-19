@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 ██      ██      ██   ██ ██    ██ ██    ██ ██          ██    ██ ██          ██    ██ ██    ██ ██   ██ ██   ██ ██   ██ ██ ██   ██ ██  ██ ██      ██ 
 ███████ ███████ ██   ██  ██████   ██████  ███████      ██████  ██           ██████   ██████  ██   ██ ██   ██ ██████  ██ ██   ██ ██   ████ ███████ 
 */
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -15,11 +15,11 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 error AddressAlreadyMaxClaimed();
 error MintingPhaseClose();
-error InvalidMintAmount();
+error InvalidMintAmount();  
 error ExceedeedTokenClaiming();
 error SupplyExceedeed();
 error InsufficientFunds();
-error AddressAlreadyClaimOrNotReserve();
+error AddressAlreadyClaim();
 error NonExistToken();
 error TokenLocked();
 error ContractIsPause();
@@ -148,9 +148,8 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         _checkWhitelistMintPhase(_phase);
         _mintCompliance(_phase, mintAmount);
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
-        if (
-            !MerkleProof.verify(_merkleProof, feature[_phase].merkleRoot, leaf)
-        ) {
+        bytes32 _merkleRoot = feature[_phase].merkleRoot;
+        if (!MerkleProof.verify(_merkleProof, _merkleRoot, leaf)) {
             revert InvalidProof();
         }
         _addressClaim[msg.sender][_phase] += mintAmount;
@@ -172,10 +171,15 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         _safeMint(msg.sender, mintAmount);
     }
 
-    function claimReserve() external {
+    function claimReserve(bytes32[] calldata _merkleProof) external {
         if (!feature[PhaseMint.fcfs].isOpen) revert MintingPhaseClose();
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
+        bytes32 _merkleRoot = feature[PhaseMint.reserve].merkleRoot;
+        if (!MerkleProof.verify(_merkleProof, _merkleRoot, leaf)) {
+            revert InvalidProof();
+        }
         uint256 _tokenReserve = _addressClaim[msg.sender][PhaseMint.reserve];
-        if (_tokenReserve == 0) revert AddressAlreadyClaimOrNotReserve();
+        if (_tokenReserve == 0) revert AddressAlreadyClaim();
         _addressClaim[msg.sender][PhaseMint.reserve] = 0;
         feature[PhaseMint.reserve].minted -= _tokenReserve;
         _safeMint(msg.sender, _tokenReserve);
@@ -243,7 +247,7 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     function withdraw() external onlyOwner nonReentrant {
         if (!pauseContract) revert ContractIsNotPause();
         uint256 balance = address(this).balance;
-        if (balance < 0 ether) revert InsufficientFunds();
+        if (balance == 0) revert InsufficientFunds();
         (bool os, ) = payable(owner()).call{value: address(this).balance}("");
         require(os);
     }
