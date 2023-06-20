@@ -16,7 +16,7 @@ export const hardhatLocal: NetworkConfigInterface = {
 /*
  * Ethereum 
  */
-export const ethereumTest: NetworkConfigInterface = {
+export const ethereumTestnetSepolia: NetworkConfigInterface = {
     chainId: 11155111,
     symbol: " SepoliaETH",
     blockExplorer: {
@@ -26,23 +26,13 @@ export const ethereumTest: NetworkConfigInterface = {
     },
 }
 
-export const ethereumTestnet: NetworkConfigInterface = {
+export const ethereumTestnetGoerli: NetworkConfigInterface = {
     chainId: 5,
     symbol: "ETH (test)",
     blockExplorer: {
       name: "Etherscan (Goerli)",
       generatorContractUrl: (contracAddress: string) => `https://goerli.etherscan.io/address/${contracAddress}`,
       generateTransactionUrl: (transactionAddress: string) => `https://goerli.etherscan.io/tx/${transactionAddress}`,
-    },
-}
-
-export const ethereumLegacyTestnet: NetworkConfigInterface = {
-    chainId: 4,
-    symbol: "ETH (test)",
-    blockExplorer: {
-        name: "Etherscan (Rinkeby)",
-        generatorContractUrl: (contractAddress: string) => `https://rinkeby.etherscan.io/address/${contractAddress}`,
-        generateTransactionUrl: (transactionAddress: string) => `https://rinkeby.etherscan.io/tx/${transactionAddress}`,
     },
 }
 

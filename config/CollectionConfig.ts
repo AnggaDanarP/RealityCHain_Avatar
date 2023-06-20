@@ -11,12 +11,12 @@ function getTimestampForFutureDate(daysToAdd: number): number {
   }
 
 const CollectionConfig: CollectionConfigInterface = {
-    testnet: Networks.polygonTestnet,
+    testnet: Networks.ethereumTestnetGoerli,
     mainnet: Networks.ethereumMainnet,
     contractName: "TestingLOG",
     durationLockToken: getTimestampForFutureDate(7),
     hiddenMetadata: "ipfs://QmbygiS9xLr2dDsRUDGSNYoDATGai1YQ2xnUFqwVczzn5j/LOG.json",
-    contractAddress: "0x5E2066E7E8C052d34D6043012a495A8ccf38D136",
+    contractAddress: "0x0a60A76d9039f509e0bB1072CB8FD03cE11F408C",
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
     freeMintAddress: freeMint, // on changes
