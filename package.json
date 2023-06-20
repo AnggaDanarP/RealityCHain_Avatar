@@ -27,7 +27,8 @@
     "public-open": "hardhat run scripts/4_public_sale_open.ts",
     "public-close": "hardhat run scripts/5_public_sale_close.ts",
     "spill": "hardhat run scripts/6_reveal_phase_2.ts",
-    "reveal": "hardhat run scripts/6_reveal_phase_3.ts"
+    "reveal": "hardhat run scripts/6_reveal_phase_3.ts",
+    "update": "hardhat run scripts/refreshMetadata.ts"
   },
   "keywords": [],
   "author": "",
@@ -40,6 +41,7 @@
     "@types/chai-as-promised": "^7.1.5",
     "@types/mocha": "^9.1.0",
     "@types/node": "^18.6.4",
+    "axios": "^1.4.0",
     "chai-as-promised": "^7.1.1",
     "dotenv": "^16.0.0",
     "hardhat": "^2.9.3",
