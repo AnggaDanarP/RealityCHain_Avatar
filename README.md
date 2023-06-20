@@ -57,6 +57,107 @@ You can start copiying the file and modifying `.env.example`. The file must be r
 
 ###### Dont forget to close the feature to make your smart contract save 
 
+## Function Public API
+
+### Whitelist Mint
+Whitelist mint is public function that not every one can mint. The wallet address is need to determined before and set the merkleRoot and it is for verify sistem security. Have 3 mint phase, `freeMint`, `reserve`, and `guaranted`.
+```http
+  whitelistMint(PhaseMint, mintAmount, _merkleProof)
+```  
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `PhaseMint` | `uint8` | Determines which phase mint to run. `int 1` for freeMint, `int 2` for reserve mint, and `int 3` for guaranteed mint` |
+| `mintAmount` | `uint256` | how many token want to mint. But it still controled by mint phase. |
+| `_merkleProof` | `bytes32[]` | For verifying that the wallet address is the address that can mint. It depends the phase mint that will be running  |
+
+### Public mint
+Public mint is `fcfs mint phase`. And every one can mint in this state but only 2 NFT can hold.
+```http
+  publicMint(mintAmount)
+```
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `mintAmount` | `uint256` | how many token want to mint. max is 2 tokens because every wallet address is allowed to have 2 NFTs|
+
+### Claim Reserve
+This function is from `reserve mint` in whitelist.
+```http
+  claimReverse(_merkleProof)
+```
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `_merkleProof` | `bytes32[]` | For verifying that the wallet address is the address that can mint. It is from `reserve mint phase` |
+
+### Airdrops
+Only owner can run this function. This is function mint that owner want to give token freely that which spesified address.
+```http
+  airdrops(to, mintAmount)
+```
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `to` | `address` | the destination of wallet address want to give NFT |
+| `mintAmount` | `uint256` | how many token owner want to give |
+
+## Function Admin (Owner) API
+
+### Set MerkleRoot
+This function is for update the merkleRoot in whitelist mint for verify sistem
+```http
+  setMerkleRoot(PhaseMint, merkleRoot)
+```  
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `PhaseMint` | `uint8` | Determines which phase mint to run. `int 1` for freeMint, `int 2` for reserve mint, and `int 3` for guaranteed mint` |
+| `merkleRoot` | `bytes32` | the merkleRoot to be base for verify  |
+
+### Set Pause Contract
+This function will pause all public function in the smart contract
+```http
+  setPauseContract(toggle)
+```
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `toggle` | `bool` | `true` is off, `false` is on|
+
+### Set Hidden Metadata
+This function is to set URI genesis.
+```http
+  setHiddenMetadata(_hiddenMetadata)
+```
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `_hiddenMetadata` | `string` | the format URI is : `"ipfs://<CID>/<name_file>.json"` |
+
+### Set Base URI
+This function is set base URI metadata art. this is also for reveal phase 2 and pahse 3.
+```http
+  setBaseUri(_newUriPrefix)
+```
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `_newUriPrefix` | `string` | the format URI is : `"ipfs://<CID>/"` |
+
+### Set Revealed
+This function is to reveal the metadata or the art in opensea
+```http
+  setRevealed(_toggle)
+```
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `_toggle` | `bool` | `true` return baseURI, `false` return hiddenMetadata |
+
+### Withdraw
+This function is drain the fund. The rule is smart contract need to be paused.
+```http
+  Withdraw()
+```
+
+
+
+## Gass Fee
+Wen we run the unit testing, it will appear the table of gass fee will be use for the smart contract. And in this update the gass fee esplaine in image table bellow
+![Gass Fee Table](gassFee/gass_fee.jpg)
+
 ## Change it before deploy in mainet
 1. private key
 2. Block explorer API to Ethereum
