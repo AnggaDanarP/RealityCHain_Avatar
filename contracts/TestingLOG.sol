@@ -26,6 +26,8 @@ error ContractIsPause();
 error ContractIsNotPause();
 error WrongInputPhase();
 error InvalidProof();
+error MaxSupplyReached();
+error TokenSoldOut();
 
 contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     bool private pauseContract = true;
@@ -131,10 +133,25 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         }
     }
 
-    function _checkWhitelistMintPhase(PhaseMint _phase) private pure {
+    function _checkSupplyNft(uint256 _mintAmount) private view {
+        uint256 _totalSupply = totalSupply();
+        uint256 _maxSupply = MAX_SUPPLY;
+        if (_totalSupply == _maxSupply) revert TokenSoldOut();
+        if ((_totalSupply + _mintAmount) > _maxSupply) {
+            revert MaxSupplyReached();
+        }
+    }
+
+    modifier _checkWhitelistMintPhase(PhaseMint _phase) {
         if (_phase == PhaseMint.fcfs) {
             revert WrongInputPhase();
         }
+        _;
+    }
+
+    modifier _isContractPaused() {
+        if (!pauseContract) revert ContractIsNotPause();
+        _;
     }
 
     // ===================================================================
@@ -144,8 +161,7 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         PhaseMint _phase,
         uint256 mintAmount,
         bytes32[] calldata _merkleProof
-    ) external payable {
-        _checkWhitelistMintPhase(_phase);
+    ) external payable _checkWhitelistMintPhase(_phase) {
         _mintCompliance(_phase, mintAmount);
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
         bytes32 _merkleRoot = feature[_phase].merkleRoot;
@@ -165,6 +181,7 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     }
 
     function mintPublic(uint256 mintAmount) external payable {
+        _checkSupplyNft(mintAmount);
         _mintCompliance(PhaseMint.fcfs, mintAmount);
         _addressClaim[msg.sender][PhaseMint.fcfs] += mintAmount;
         feature[PhaseMint.fcfs].minted += mintAmount;
@@ -185,7 +202,8 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         _safeMint(msg.sender, _tokenReserve);
     }
 
-    function airdrops(address to, uint256 mintAmount) external onlyOwner {
+    function airdrops(address to, uint256 mintAmount) external _isContractPaused onlyOwner {
+        _checkSupplyNft(mintAmount);
         _safeMint(to, mintAmount);
     }
 
@@ -199,16 +217,14 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     function setMerkleRoot(
         PhaseMint _phase,
         bytes32 merkleRoot
-    ) external onlyOwner {
-        _checkWhitelistMintPhase(_phase);
+    ) external _checkWhitelistMintPhase(_phase) onlyOwner {
         feature[_phase].merkleRoot = merkleRoot;
     }
 
     function openWhitelistMint(
         PhaseMint _phase,
         bool toggle
-    ) external onlyOwner {
-        _checkWhitelistMintPhase(_phase);
+    ) external _checkWhitelistMintPhase(_phase) onlyOwner {
         feature[_phase].isOpen = toggle;
     }
 
@@ -244,8 +260,7 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         _revealed = _toggle;
     }
 
-    function withdraw() external onlyOwner nonReentrant {
-        if (!pauseContract) revert ContractIsNotPause();
+    function withdraw() external _isContractPaused onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         if (balance == 0) revert InsufficientFunds();
         (bool os, ) = payable(owner()).call{value: address(this).balance}("");

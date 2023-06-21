@@ -156,7 +156,7 @@ This function is drain the fund. The rule is smart contract need to be paused.
 
 ## Gass Fee
 Wen we run the unit testing, it will appear the table of gass fee will be use for the smart contract. And in this update the gass fee esplaine in image table bellow
-![Gass Fee Table](gassFee/gass_fee.jpg)
+![Gass Fee Table](gassFee/gass_fee_result.jpg)
 
 ## Change it before deploy in mainet
 1. private key
