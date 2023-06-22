@@ -45,7 +45,7 @@ task('generate-root-hash-free-mint', 'Generates and prints out the root hash for
   // Build the Merkle Tree
   const leafNodes = CollectionConfig.freeMintAddress.map(addr => keccak256(addr));
   const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
-  const rootHash = '0x' + merkleTree.getRoot().toString('hex');
+  const rootHash = merkleTree.getHexRoot();
 
   console.log('The Merkle Tree root hash for the current whitelist is: ' + rootHash);
 });
@@ -59,7 +59,7 @@ task('generate-proof-free-mint', 'Generates and prints out the whitelist proof f
   // Build the Merkle Tree
   const leafNodes = CollectionConfig.freeMintAddress.map(addr => keccak256(addr));
   const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
-  const proof = merkleTree.getHexProof(keccak256(taskArgs.address)).toString().replace(/'/g, '').replace(/ /g, '');
+  const proof = merkleTree.getHexProof(keccak256(taskArgs.address));
 
   console.log('The whitelist proof for the given address is: ' + proof);
 })
@@ -120,6 +120,22 @@ task('generate-proof-guaranteed', 'Generates and prints out the guaranteed proof
   const proof = merkleTree.getHexProof(keccak256(taskArgs.address)).toString().replace(/'/g, '').replace(/ /g, '');
 
   console.log('The whitelist proof for the given address is: ' + proof);
+})
+.addPositionalParam('address', 'The public address');
+
+task('verify-whitelist', 'Verify the address is on whitelist', async (taskArgs: {address: string}) => {
+  if (CollectionConfig.freeMintAddress.length < 1) {
+    throw "\x1b[31merror\x1b[0m" + "The whitelist is emty, please add some address to the configuration.";
+  }
+
+  const leafNodes = CollectionConfig.freeMintAddress.map(addr => keccak256(addr));
+  const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
+  const rootHash = '0x' + merkleTree.getRoot().toString('hex');
+  const proof = merkleTree.getHexProof(keccak256(taskArgs.address));
+
+  // const result = merkleTree.verify(proof, leafNodes, rootHash);
+
+  // console.log("Your address is: " + result);
 })
 .addPositionalParam('address', 'The public address');
 

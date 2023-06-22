@@ -22,8 +22,8 @@ async function main() {
     throw '\x1b[31merror\x1b[0m ' + 'Please add the contract address to the configuration before running this command.';
   }
 
-  for (let i = 1; i <= totalTokens.toNumber(); i++) {
-    const tokenId = String(i + 1);
+  for (let i = 1; i <= totalTokens; i++) {
+    const tokenId = String(i);
     await refreshMetadata(CollectionConfig.contractAddress, tokenId);
   }
 }

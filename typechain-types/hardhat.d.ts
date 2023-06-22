@@ -6,7 +6,7 @@ import { ethers } from "ethers";
 import {
   FactoryOptions,
   HardhatEthersHelpers as HardhatEthersHelpersBase,
-} from "@nomiclabs/hardhat-ethers/types";
+} from "@nomicfoundation/hardhat-ethers/types";
 
 import * as Contracts from ".";
 
@@ -32,32 +32,133 @@ declare module "hardhat/types/runtime" {
       name: "IERC721A",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC721A__factory>;
+    getContractFactory(
+      name: "DefaultOperatorFilterer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.DefaultOperatorFilterer__factory>;
+    getContractFactory(
+      name: "IOperatorFilterRegistry",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IOperatorFilterRegistry__factory>;
+    getContractFactory(
+      name: "OperatorFilterer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OperatorFilterer__factory>;
 
     getContractAt(
       name: "Ownable",
-      address: string,
+      address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.Ownable>;
     getContractAt(
       name: "TestingLOG",
-      address: string,
+      address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.TestingLOG>;
     getContractAt(
       name: "ERC721A__IERC721Receiver",
-      address: string,
+      address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.ERC721A__IERC721Receiver>;
     getContractAt(
       name: "ERC721A",
-      address: string,
+      address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.ERC721A>;
     getContractAt(
       name: "IERC721A",
-      address: string,
+      address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.IERC721A>;
+    getContractAt(
+      name: "DefaultOperatorFilterer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.DefaultOperatorFilterer>;
+    getContractAt(
+      name: "IOperatorFilterRegistry",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IOperatorFilterRegistry>;
+    getContractAt(
+      name: "OperatorFilterer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.OperatorFilterer>;
+
+    deployContract(
+      name: "Ownable",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Ownable>;
+    deployContract(
+      name: "TestingLOG",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TestingLOG>;
+    deployContract(
+      name: "ERC721A__IERC721Receiver",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721A__IERC721Receiver>;
+    deployContract(
+      name: "ERC721A",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721A>;
+    deployContract(
+      name: "IERC721A",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC721A>;
+    deployContract(
+      name: "DefaultOperatorFilterer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.DefaultOperatorFilterer>;
+    deployContract(
+      name: "IOperatorFilterRegistry",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IOperatorFilterRegistry>;
+    deployContract(
+      name: "OperatorFilterer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OperatorFilterer>;
+
+    deployContract(
+      name: "Ownable",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Ownable>;
+    deployContract(
+      name: "TestingLOG",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TestingLOG>;
+    deployContract(
+      name: "ERC721A__IERC721Receiver",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721A__IERC721Receiver>;
+    deployContract(
+      name: "ERC721A",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721A>;
+    deployContract(
+      name: "IERC721A",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC721A>;
+    deployContract(
+      name: "DefaultOperatorFilterer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.DefaultOperatorFilterer>;
+    deployContract(
+      name: "IOperatorFilterRegistry",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IOperatorFilterRegistry>;
+    deployContract(
+      name: "OperatorFilterer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OperatorFilterer>;
 
     // default types
     getContractFactory(
@@ -66,13 +167,22 @@ declare module "hardhat/types/runtime" {
     ): Promise<ethers.ContractFactory>;
     getContractFactory(
       abi: any[],
-      bytecode: ethers.utils.BytesLike,
+      bytecode: ethers.BytesLike,
       signer?: ethers.Signer
     ): Promise<ethers.ContractFactory>;
     getContractAt(
       nameOrAbi: string | any[],
-      address: string,
+      address: string | ethers.Addressable,
       signer?: ethers.Signer
+    ): Promise<ethers.Contract>;
+    deployContract(
+      name: string,
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<ethers.Contract>;
+    deployContract(
+      name: string,
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<ethers.Contract>;
   }
 }

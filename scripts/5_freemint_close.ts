@@ -1,5 +1,4 @@
 import NftContractProvider from "../lib/NftContractProvider";
-// import { BigNumber } from "ethers";
 
 async function main() {
     // attach to deploy contract
@@ -12,7 +11,7 @@ async function main() {
     await (await contract.openWhitelistMint(1, false)).wait();
   }
     
-    console.log("Whitelist sale has been disabled!");
+    console.log("Free mint has been disabled!");
 }
 
 main().catch((error) => {

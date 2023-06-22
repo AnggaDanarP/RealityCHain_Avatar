@@ -12,10 +12,11 @@ import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "operator-filter-registry/src/DefaultOperatorFilterer.sol";
 
 error AddressAlreadyMaxClaimed();
 error MintingPhaseClose();
-error InvalidMintAmount();  
+error InvalidMintAmount();
 error ExceedeedTokenClaiming();
 error SupplyExceedeed();
 error InsufficientFunds();
@@ -27,12 +28,17 @@ error ContractIsNotPause();
 error WrongInputPhase();
 error InvalidProof();
 error MaxSupplyReached();
-error TokenSoldOut();
 
-contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
+contract TestingLOG is
+    ERC721A,
+    Ownable,
+    ReentrancyGuard,
+    DefaultOperatorFilterer
+{
     bool private pauseContract = true;
     bool private _revealed = false;
     bool private _toggleTokenLock = true;
+    uint256 private constant ROYALTY_DIVISOR = 1_000;
     uint256 private constant MAX_SUPPLY = 5555;
     string private _hiddenMetadata = "";
     string private _uriPrefix = "";
@@ -56,6 +62,10 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     mapping(PhaseMint => PhaseSpec) public feature;
     mapping(address => mapping(PhaseMint => uint256)) private _addressClaim;
     mapping(uint256 => bool) private _tokenLocked;
+
+    // Royalty state
+    uint256 royaltyFee = 50;
+    address royaltyReceiver;
 
     event Locked(uint256 tokenId);
 
@@ -108,91 +118,100 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         PhaseMint _phase,
         uint256 _mintAmount
     ) private view {
-        if (pauseContract) revert ContractIsPause();
-        if (!feature[_phase].isOpen) {
-            revert MintingPhaseClose();
-        }
         uint256 _maxAmountPerAddress = feature[_phase].maxAmountPerAddress;
         if (_mintAmount < 1 || _mintAmount > _maxAmountPerAddress) {
             revert InvalidMintAmount();
         }
-        uint256 _holderAmount = _addressClaim[msg.sender][_phase];
-        if (_holderAmount == _maxAmountPerAddress) {
-            revert AddressAlreadyMaxClaimed();
-        }
-        if (_holderAmount + _mintAmount > _maxAmountPerAddress) {
+        if (
+            _addressClaim[msg.sender][_phase] + _mintAmount >
+            _maxAmountPerAddress
+        ) {
             revert ExceedeedTokenClaiming();
         }
-        uint256 _cost = feature[_phase].cost;
-        if (msg.value < _mintAmount * _cost) {
-            revert InsufficientFunds();
-        }
-        uint256 _supply = feature[_phase].supply;
-        if ((feature[_phase].minted + _mintAmount) - 1 > _supply) {
+        if (
+            (feature[_phase].minted + _mintAmount) - 1 > feature[_phase].supply
+        ) {
             revert SupplyExceedeed();
         }
-    }
-
-    function _checkSupplyNft(uint256 _mintAmount) private view {
-        uint256 _totalSupply = totalSupply();
-        uint256 _maxSupply = MAX_SUPPLY;
-        if (_totalSupply == _maxSupply) revert TokenSoldOut();
-        if ((_totalSupply + _mintAmount) > _maxSupply) {
+        if ((totalSupply() + _mintAmount) > MAX_SUPPLY) {
             revert MaxSupplyReached();
         }
     }
 
-    modifier _checkWhitelistMintPhase(PhaseMint _phase) {
-        if (_phase == PhaseMint.fcfs) {
-            revert WrongInputPhase();
+    function _checkCost(PhaseMint _phase, uint256 _mintAmount) private {
+        if (msg.value < _mintAmount * feature[_phase].cost) {
+            revert InsufficientFunds();
         }
-        _;
+        _addressClaim[msg.sender][_phase] += _mintAmount;
+        feature[_phase].minted += _mintAmount;
     }
 
-    modifier _isContractPaused() {
-        if (!pauseContract) revert ContractIsNotPause();
+    function _verifying(
+        PhaseMint _phase,
+        bytes32[] calldata _merkleProof
+    ) private view returns (bool) {
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
+        return
+            MerkleProof.verify(_merkleProof, feature[_phase].merkleRoot, leaf);
+    }
+
+    modifier isContractPaused(PhaseMint _phase) {
+        if (pauseContract) revert ContractIsPause();
+        if (!feature[_phase].isOpen) {
+            revert MintingPhaseClose();
+        }
         _;
     }
 
     // ===================================================================
     //                                MINT
     // ===================================================================
+    function freeMint(
+        bytes32[] calldata _merkleProof
+    ) external isContractPaused(PhaseMint.freeMint) {
+        if (!_verifying(PhaseMint.freeMint, _merkleProof)) {
+            revert InvalidProof();
+        }
+        _mintCompliance(PhaseMint.freeMint, 1);
+        uint256 _tokenId = totalSupply() + 1;
+        _tokenLocked[_tokenId] = true;
+        _addressClaim[msg.sender][PhaseMint.freeMint]++;
+        feature[PhaseMint.freeMint].minted++;
+        _safeMint(msg.sender, 1);
+    }
+
     function whitelistMint(
         PhaseMint _phase,
         uint256 mintAmount,
         bytes32[] calldata _merkleProof
-    ) external payable _checkWhitelistMintPhase(_phase) {
-        _mintCompliance(_phase, mintAmount);
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
-        bytes32 _merkleRoot = feature[_phase].merkleRoot;
-        if (!MerkleProof.verify(_merkleProof, _merkleRoot, leaf)) {
+    ) external payable isContractPaused(_phase) {
+        if (_phase == PhaseMint.freeMint || _phase == PhaseMint.fcfs) {
+            revert WrongInputPhase();
+        }
+        if (!_verifying(_phase, _merkleProof)) {
             revert InvalidProof();
         }
-        _addressClaim[msg.sender][_phase] += mintAmount;
-        feature[_phase].minted += mintAmount;
-        if (_phase == PhaseMint.freeMint) {
-            uint256 _tokenId = totalSupply() + 1;
-            _tokenLocked[_tokenId] = true;
-        }
+        _mintCompliance(_phase, mintAmount);
+        _checkCost(_phase, mintAmount);
         if (_phase == PhaseMint.reserve) {
             return;
         }
         _safeMint(msg.sender, mintAmount);
     }
 
-    function mintPublic(uint256 mintAmount) external payable {
-        _checkSupplyNft(mintAmount);
+    function mintPublic(
+        uint256 mintAmount
+    ) external payable isContractPaused(PhaseMint.fcfs) {
         _mintCompliance(PhaseMint.fcfs, mintAmount);
-        _addressClaim[msg.sender][PhaseMint.fcfs] += mintAmount;
-        feature[PhaseMint.fcfs].minted += mintAmount;
+        _checkCost(PhaseMint.fcfs, mintAmount);
         _safeMint(msg.sender, mintAmount);
     }
 
-    function claimReserve(bytes32[] calldata _merkleProof) external {
+    function claimReserve(
+        bytes32[] calldata _merkleProof
+    ) external isContractPaused(PhaseMint.fcfs) {
         if (!feature[PhaseMint.fcfs].isOpen) revert MintingPhaseClose();
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
-        bytes32 _merkleRoot = feature[PhaseMint.reserve].merkleRoot;
-        if (!MerkleProof.verify(_merkleProof, _merkleRoot, leaf)) {
+        if (!_verifying(PhaseMint.reserve, _merkleProof)) {
             revert InvalidProof();
         }
         uint256 _tokenReserve = _addressClaim[msg.sender][PhaseMint.reserve];
@@ -202,9 +221,18 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         _safeMint(msg.sender, _tokenReserve);
     }
 
-    function airdrops(address to, uint256 mintAmount) external _isContractPaused onlyOwner {
-        _checkSupplyNft(mintAmount);
-        _safeMint(to, mintAmount);
+    function airdrops(address[] calldata to) external onlyOwner {
+        if (!pauseContract) revert ContractIsNotPause();
+        uint256 _mintAmount = to.length;
+        if ((totalSupply() + _mintAmount) > MAX_SUPPLY) {
+            revert MaxSupplyReached();
+        }
+        for (uint256 i = 0; i < _mintAmount; ) {
+            _safeMint(to[i], 1);
+            unchecked {
+                i++;
+            }
+        }
     }
 
     // ===================================================================
@@ -217,14 +245,20 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
     function setMerkleRoot(
         PhaseMint _phase,
         bytes32 merkleRoot
-    ) external _checkWhitelistMintPhase(_phase) onlyOwner {
+    ) external onlyOwner {
+        if (_phase == PhaseMint.fcfs) {
+            revert WrongInputPhase();
+        }
         feature[_phase].merkleRoot = merkleRoot;
     }
 
     function openWhitelistMint(
         PhaseMint _phase,
         bool toggle
-    ) external _checkWhitelistMintPhase(_phase) onlyOwner {
+    ) external onlyOwner {
+        if (_phase == PhaseMint.fcfs) {
+            revert WrongInputPhase();
+        }
         feature[_phase].isOpen = toggle;
     }
 
@@ -233,7 +267,8 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
             uint256 _totalSupply = totalSupply();
             uint256 _reserveMint = feature[PhaseMint.reserve].minted;
             uint256 _maxSupply = MAX_SUPPLY;
-            uint256 _setSupply = _maxSupply - (_totalSupply + (_reserveMint - 1));
+            uint256 _setSupply = _maxSupply -
+                (_totalSupply + (_reserveMint - 1));
 
             feature[PhaseMint.fcfs].isOpen = true;
             feature[PhaseMint.fcfs].supply = _setSupply;
@@ -260,7 +295,8 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
         _revealed = _toggle;
     }
 
-    function withdraw() external _isContractPaused onlyOwner nonReentrant {
+    function withdraw() external onlyOwner nonReentrant {
+        if (!pauseContract) revert ContractIsNotPause();
         uint256 balance = address(this).balance;
         if (balance == 0) revert InsufficientFunds();
         (bool os, ) = payable(owner()).call{value: address(this).balance}("");
@@ -309,5 +345,44 @@ contract TestingLOG is ERC721A, Ownable, ReentrancyGuard {
             }
         }
         super._beforeTokenTransfers(from, to, startTokenId, quantity);
+    }
+
+    function setApprovalForAll(
+        address operator,
+        bool approved
+    ) public override onlyAllowedOperatorApproval(operator) {
+        super.setApprovalForAll(operator, approved);
+    }
+
+    function approve(
+        address operator,
+        uint256 tokenId
+    ) public payable override onlyAllowedOperatorApproval(operator) {
+        super.approve(operator, tokenId);
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public payable override onlyAllowedOperator(from) {
+        super.transferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public payable override onlyAllowedOperator(from) {
+        super.safeTransferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory data
+    ) public payable override onlyAllowedOperator(from) {
+        super.safeTransferFrom(from, to, tokenId, data);
     }
 }
