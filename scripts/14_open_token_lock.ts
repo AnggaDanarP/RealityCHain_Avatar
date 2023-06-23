@@ -4,7 +4,7 @@ async function main() {
     // attach to deployed contract
     const contract = await NftContractProviders.getContract();
 
-    await (await contract.setTokenLock(true)).wait();
+    await (await contract.setTokenLock(false)).wait();
 
     console.log("Token unlocked");
 }

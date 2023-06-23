@@ -1,15 +1,15 @@
 import { MerkleTree } from "merkletreejs";
 import keccak256 from "keccak256";
-import CollectionConfig from "./../config/CollectionConfig";
-import NftContractProvider from "./../lib/NftContractProvider";
+import CollectionConfig from "../config/CollectionConfig";
+import NftContractProvider from "../lib/NftContractProvider";
 
 async function main() {
-    if (CollectionConfig.guarantedAddress.length < 1) {
+    if (CollectionConfig.fcfsAddress.length < 1) {
         throw "\x1b[31merror\x1b[0m" + "The whitelist is emty, please add some address to the configuration.";
     }
 
     // Build merkle tree
-    let leafNodes = CollectionConfig.guarantedAddress.map(addr => keccak256(addr));
+    let leafNodes = CollectionConfig.fcfsAddress.map(addr => keccak256(addr));
     let merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
     const rootHash = merkleTree.getHexRoot();
 
@@ -18,20 +18,20 @@ async function main() {
     const contract = await NftContractProvider.getContract();
 
     //update root hash (if changed)
-    if ((await contract.feature(3)).merkleRoot !== rootHash) {
+    if ((await contract.feature(2)).merkleRoot !== rootHash) {
         console.log(`Updating the root hash to: ${rootHash}`);
     
-        await contract.setMerkleRoot(3, rootHash);
+        await contract.setMerkleRoot(2, rootHash);
     }
 
     // Enable whitelist sale (if needed)
-    if (!(await contract.feature(3)).isOpen) {
-        console.log('Enabling guaranted...');
+    if (!(await contract.feature(2)).isOpen) {
+        console.log('Enabling fcfs...');
 
-        await contract.openWhitelistMint(3, true);
+        await contract.openWhitelistMint(2, true);
     }
 
-    console.log("Guaranted has been enabled!");
+    console.log("FCFS has been enabled!");
 }
 
 main().catch((error) => {

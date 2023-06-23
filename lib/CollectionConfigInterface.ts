@@ -9,7 +9,7 @@ export default interface CollectionConfigInterface {
     hiddenMetadata: string;
     contractAddress: string|null;
     freeMintAddress: string[];
-    reserveAddress: string[];
+    fcfsAddress: string[];
     guarantedAddress: string[];
     marketplaceIdentifier: string;
     marketplaceConfig: MarketplaceConfigInterface;

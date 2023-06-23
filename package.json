@@ -35,7 +35,7 @@
     "public-close": "hardhat run scripts/11_public_close.ts",
     "spill": "hardhat run scripts/12_reveal_phase_2.ts",
     "reveal": "hardhat run scripts/13_reveal_phase_3.ts",
-    "open-token": "hardhat run scripts/14_open_token.ts",
+    "open-token": "hardhat run scripts/14_open_token_lock.ts",
     "set-hidden": "hardhat run scripts/15_hidden_uri_3.ts", 
     "withdraw": "hardhat run scripts/16_withdraw.ts",
     "update": "hardhat run scripts/refreshMetadata.ts"

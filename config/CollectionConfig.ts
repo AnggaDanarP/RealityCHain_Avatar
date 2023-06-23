@@ -2,7 +2,7 @@ import CollectionConfigInterface from "../lib/CollectionConfigInterface";
 import * as Networks from "../lib/Networks";
 import * as Marketpalce from "../lib/Marketplaces";
 import freeMintAddress from "./freeMint.json";
-import reserveAddress from "./reserve.json";
+import fcfsAddress from "./fcfs.json";
 import guarantedAddress from "./guarantedd.json";
 
 function getTimestampForFutureDate(daysToAdd: number): number {
@@ -20,7 +20,7 @@ const CollectionConfig: CollectionConfigInterface = {
     marketplaceIdentifier: "This-is-only-a-demo-test-nft",
     marketplaceConfig: Marketpalce.openSea,
     freeMintAddress,
-    reserveAddress,
+    fcfsAddress,
     guarantedAddress
 };
 

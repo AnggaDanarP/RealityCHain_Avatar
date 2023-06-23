@@ -115,7 +115,7 @@ describe(CollectionConfig.contractName, function () {
     // nobody should be able to mint from paused contract
     // free mint
     await expect(
-      contract.connect(whitelistUser).freeMint([])
+      contract.connect(whitelistUser).whitelistMint(1, 1, [], { value: getPrice("0", 1) })
     ).to.be.revertedWith("ContractIsPause");
     // reserve
     await expect(
@@ -194,7 +194,7 @@ describe(CollectionConfig.contractName, function () {
 
     // still can't mint bacause contract is still close
     await expect(
-      contract.connect(whitelistUser).freeMint([])
+      contract.connect(whitelistUser).whitelistMint(1, 1, [], { value: getPrice("0", 1) })
     ).to.be.revertedWith("ContractIsPause");
 
     // open the contract
@@ -224,20 +224,18 @@ describe(CollectionConfig.contractName, function () {
     
     // Update the root hash
     await (await contract.setMerkleRoot(1, '0x' + rootHash.toString('hex'))).wait();
-    console.log("The root hash is:  "+ '0x' + rootHash.toString('hex'));
 
     // check merklerooot
     await expect(
-      contract.connect(unkownUser).freeMint(merkleTree.getHexProof(keccak256(await unkownUser.getAddress())))
+      contract.connect(unkownUser).whitelistMint(2, 1, merkleTree.getHexProof(keccak256(await unkownUser.getAddress())), { value: getPrice("0", 1) })
     ).to.be.revertedWith("InvalidProof");
 
     // minting nft free mint
-    await contract.connect(whitelistUser).freeMint(merkleTree.getHexProof(keccak256(await whitelistUser.getAddress())));
-    console.log("The proof hash   is:  "+merkleTree.getHexProof(keccak256(await whitelistUser.getAddress())));
+    await contract.connect(whitelistUser).whitelistMint(2, 1, merkleTree.getHexProof(keccak256(await whitelistUser.getAddress())), { value: getPrice("0", 1) });
 
     // try to mint again
     await expect(
-      contract.connect(whitelistUser).freeMint(merkleTree.getHexProof(keccak256(await whitelistUser.getAddress())))
+      contract.connect(whitelistUser).whitelistMint(2, 1, merkleTree.getHexProof(keccak256(await whitelistUser.getAddress())), { value: getPrice("0", 1) })
     ).to.be.revertedWith("ExceedeedTokenClaiming");
 
     // check supply

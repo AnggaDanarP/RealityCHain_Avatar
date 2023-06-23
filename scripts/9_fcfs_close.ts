@@ -6,12 +6,12 @@ async function main() {
 
     // Disable whitelist sale (if needed)
   if (((await contract.feature(2)).isOpen)) {
-    console.log('Disabling reserve...');
+    console.log('Disabling fcfs...');
 
     await (await contract.openWhitelistMint(2, false)).wait();
   }
     
-    console.log("Reserve has been disabled!");
+    console.log("FCFS has been disabled!");
 }
 
 main().catch((error) => {
