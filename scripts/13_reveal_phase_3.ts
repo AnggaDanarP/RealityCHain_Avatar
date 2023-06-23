@@ -8,18 +8,8 @@ async function main() {
     // attach to deployed contract
     const contract = await NftContractProviders.getContract();
 
-    if ((await contract.uriPrefix()) !== process.env.COLLECTION_URI_PHASE3) {
-        console.log(`Updating the URI prefix phase 3 to: ${process.env.COLLECTION_URI_PHASE3}`);
-    
-        await (await contract.setBaseUri(process.env.COLLECTION_URI_PHASE3)).wait();
-    }
-
-    // Revealing the collection (if needed)
-    if (!await contract.revealed()) {
-        console.log('Revealing the collection...');
-
-        await (await contract.setRevealed(true)).wait();
-    }
+    console.log(`Updating the URI prefix phase 3 to: ${process.env.COLLECTION_URI_PHASE3}`);
+    await (await contract.setBaseUri(process.env.COLLECTION_URI_PHASE3)).wait();
 
     console.log("Your Collection is Open...");
 }

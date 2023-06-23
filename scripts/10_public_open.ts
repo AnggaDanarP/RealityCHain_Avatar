@@ -4,11 +4,12 @@ async function main() {
     // attach to deployed contract
     const contract = await NftContractProvider.getContract();
 
-    // Unpause the contract (if needed)
-    console.log('Unpausing the contract...');
-    await (await contract.openPublictMint(true)).wait();
-
-    console.log('Public sale is now open with 50 supply!');
+    if (((await contract.feature(0)).isOpen)) {
+        console.log('Disabling public mint...');
+        await (await contract.openPublictMint(true)).wait();
+    }
+    const supply = (await contract.feature(0)).supply;
+    console.log(`Public sale is now open with ${supply} NFT`);
 }
 
 main().catch((error) => {

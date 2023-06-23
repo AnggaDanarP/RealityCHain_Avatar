@@ -6,7 +6,7 @@ async function main() {
 
     // Disable whitelist sale (if needed)
   if (((await contract.feature(1)).isOpen)) {
-    console.log('Disabling whitelist sale...');
+    console.log('Disabling freemint...');
 
     await (await contract.openWhitelistMint(1, false)).wait();
   }
