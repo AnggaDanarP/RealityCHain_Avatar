@@ -18,7 +18,7 @@
     "proof-free-mint": "hardhat generate-proof-free-mint",
     "root-hash-reserve": "hardhat generate-root-hash-reserve",
     "proof-reserve": "hardhat generate-proof-reserve",
-    "root-hash-guaranted": "hardhat generate-root-hash-guaranteed",
+    "root-hash-guaranted": "hardhat generate-root-guaranteed",
     "proof-guaranted": "hardhat generate-proof-guaranteed",
     "isvalid": "hardhat verify-whitelist",
     "deploy": "hardhat run scripts/1_deploy.ts",
