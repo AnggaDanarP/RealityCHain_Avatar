@@ -70,7 +70,7 @@ contract TestingLOG is
             merkleRoot: 0x00,
             supply: 2600,
             cost: 0.019 ether,
-            maxAmountPerAddress: 2,
+            maxAmountPerAddress: 3,
             isOpen: false,
             minted: 1
         });
@@ -190,6 +190,17 @@ contract TestingLOG is
         return _maxSupply - (_totalSupply + _tokenFreeMint);
     }
 
+    function _mintLOG(address _to, uint256 _mintAmount) private {
+        for (uint256 i = 0; i < _mintAmount;) {
+            uint256 _tokenId = totalSupply();
+            _safeMint(_to, 1);
+            emit TokenMintedAt(_msgSender(), _tokenId);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     // ===================================================================
     //                                MINT
     // ===================================================================
@@ -215,8 +226,7 @@ contract TestingLOG is
         _mintCompliance(_phase, mintAmount);
         _addressClaim[_msgSender()][_phase] += mintAmount;
         _feature[_phase].minted += mintAmount;
-        _safeMint(_msgSender(), mintAmount);
-        emit TokenMintedAt(_msgSender(), totalSupply());
+        _mintLOG(_msgSender(), mintAmount);
     }
 
     function mintPublic(uint256 mintAmount) external payable {
@@ -225,16 +235,14 @@ contract TestingLOG is
         _mintCompliance(PhaseMint.publicSale, mintAmount);
         _addressClaim[_msgSender()][PhaseMint.publicSale] += mintAmount;
         _feature[PhaseMint.publicSale].minted += mintAmount;
-        _safeMint(_msgSender(), mintAmount);
-        emit TokenMintedAt(_msgSender(), totalSupply());
+        _mintLOG(_msgSender(), mintAmount);
     }
 
     function claimFreeToken() external {
         _checkClaimFreeMint();
         _addressClaim[_msgSender()][PhaseMint.freeMint]--;
         _feature[PhaseMint.freeMint].minted--;
-        _safeMint(_msgSender(), 1);
-        emit TokenMintedAt(_msgSender(), totalSupply());
+        _mintLOG(_msgSender(), 1);
     }
 
     // Need update more !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

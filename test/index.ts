@@ -71,7 +71,7 @@ describe(CollectionConfig.contractName, function () {
     // public mint
     expect(await contract.getSupplyPhase(0)).to.equal(2600);
     expect(await contract.getCostPhase(0)).to.equal(utils.parseEther("0.019"));
-    expect(await contract.getMaxAmountPerAddressPhase(0)).to.equal(2);
+    expect(await contract.getMaxAmountPerAddressPhase(0)).to.equal(3);
     expect(await contract.isOpenPhase(0)).to.equal(false);
     expect(await contract.getPhaseAlreadyMinted(0)).to.equal(0);
 
@@ -421,7 +421,7 @@ describe(CollectionConfig.contractName, function () {
 
     // error
     await expect(
-      contract.connect(publicAddress).mintPublic(3, { value: getPrice("0.019", 3) })
+      contract.connect(publicAddress).mintPublic(4, { value: getPrice("0.019", 4) })
     ).to.be.revertedWith("InvalidMintAmount");
 
     await expect(
@@ -433,7 +433,7 @@ describe(CollectionConfig.contractName, function () {
     ).to.be.revertedWith("InsufficientFunds");
 
     // success
-    await contract.connect(publicAddress).mintPublic(1, { value: getPrice("0.019", 1) });
+    await contract.connect(publicAddress).mintPublic(2, { value: getPrice("0.019", 2) });
 
     // error
     await expect(
@@ -449,14 +449,14 @@ describe(CollectionConfig.contractName, function () {
     ).to.be.revertedWith("ExceedeedTokenClaiming");
 
     // check supply
-    expect(await contract.getPhaseAlreadyMinted(0)).to.equal(2);
-    expect(await contract.totalSupply()).to.be.equal(10);
+    expect(await contract.getPhaseAlreadyMinted(0)).to.equal(3);
+    expect(await contract.totalSupply()).to.be.equal(11);
 
     // check balance
     // balance is same with free mint, because Reserve doesnt minting token
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
     expect(await contract.balanceOf(await whitelistUser.getAddress())).to.equal(5);
-    expect(await contract.balanceOf(await publicAddress.getAddress())).to.equal(3);
+    expect(await contract.balanceOf(await publicAddress.getAddress())).to.equal(4);
     expect(await contract.balanceOf(await unkownUser.getAddress())).to.equal(1);
   });
 
@@ -505,13 +505,13 @@ describe(CollectionConfig.contractName, function () {
 
     // check supply
     expect(await contract.getPhaseAlreadyMinted(1)).to.equal(0); // decrease every claim token
-    expect(await contract.totalSupply()).to.be.equal(11);
+    expect(await contract.totalSupply()).to.be.equal(12);
 
     // check balance
     // balance is same with free mint, because Reserve doesnt minting token
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
     expect(await contract.balanceOf(await whitelistUser.getAddress())).to.equal(6);
-    expect(await contract.balanceOf(await publicAddress.getAddress())).to.equal(3);
+    expect(await contract.balanceOf(await publicAddress.getAddress())).to.equal(4);
     expect(await contract.balanceOf(await unkownUser.getAddress())).to.equal(1);
 
   });
