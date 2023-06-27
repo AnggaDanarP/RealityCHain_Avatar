@@ -4,12 +4,9 @@ async function main() {
     // attach to deployed contract
     const contract = await NftContractProvider.getContract();
 
-    if (((await contract.feature(0)).isOpen)) {
-        console.log('Disabling public mint...');
-        await (await contract.openPublictMint(false)).wait();
-    }
+    await (await contract.toggleClaimFreeMint(true)).wait();
 
-    console.log('Public sale is now close!');
+    console.log('Open claim token free mint');
 }
 
 main().catch((error) => {

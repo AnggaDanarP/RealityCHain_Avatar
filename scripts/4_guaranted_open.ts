@@ -1,5 +1,5 @@
-import { MerkleTree } from "merkletreejs";
-import keccak256 from "keccak256";
+// import { MerkleTree } from "merkletreejs";
+// import keccak256 from "keccak256";
 import CollectionConfig from "../config/CollectionConfig";
 import NftContractProvider from "../lib/NftContractProvider";
 
@@ -9,26 +9,26 @@ async function main() {
     }
 
     // Build merkle tree
-    let leafNodes = CollectionConfig.guarantedAddress.map(addr => keccak256(addr));
-    let merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
-    const rootHash = merkleTree.getHexRoot();
+    // let leafNodes = CollectionConfig.guarantedAddress.map(addr => keccak256(addr));
+    // let merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
+    // const rootHash = merkleTree.getHexRoot();
 
 
     // attach to deploy contract
     const contract = await NftContractProvider.getContract();
 
     //update root hash (if changed)
-    if ((await contract.feature(3)).merkleRoot !== rootHash) {
-        console.log(`Updating the root hash to: ${rootHash}`);
+    // if ((await contract.feature(3)).merkleRoot !== rootHash) {
+    //     console.log(`Updating the root hash to: ${rootHash}`);
     
-        await contract.setMerkleRoot(3, rootHash);
-    }
+        // await contract.setMerkleRoot(2, rootHash);
+    //}
 
     // Enable whitelist sale (if needed)
     if (!(await contract.feature(3)).isOpen) {
         console.log('Enabling guaranted...');
 
-        await contract.openWhitelistMint(3, true);
+        await contract.toggleMintPhase(2, true);
     }
 
     console.log("Guaranted has been enabled!");

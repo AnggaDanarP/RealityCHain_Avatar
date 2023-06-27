@@ -65,7 +65,7 @@ task('generate-proof-free-mint', 'Generates and prints out the whitelist proof f
 })
 .addPositionalParam('address', 'The public address');
 
-task('generate-root-fcfc', 'Generates and prints out the root hash for the current reserve', async () => {
+task('generate-root-fcfs', 'Generates and prints out the root hash for the current reserve', async () => {
   // Check configuration
   if (CollectionConfig.fcfsAddress.length < 1) {
     throw 'The whitelist is empty, please add some addresses to the configuration.';
@@ -79,7 +79,7 @@ task('generate-root-fcfc', 'Generates and prints out the root hash for the curre
   console.log('The Merkle Tree root hash for the current whitelist is: ' + rootHash);
 });
 
-task('generate-proof-reserve', 'Generates and prints out the reserve proof for the given address (compatible with block explorers such as Etherscan)', async (taskArgs: {address: string}) => {
+task('generate-proof-fcfs', 'Generates and prints out the reserve proof for the given address (compatible with block explorers such as Etherscan)', async (taskArgs: {address: string}) => {
   // Check configuration
   if (CollectionConfig.fcfsAddress.length < 1) {
     throw 'The whitelist is empty, please add some addresses to the configuration.';
@@ -180,7 +180,7 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 1000,
       },
     },
   },

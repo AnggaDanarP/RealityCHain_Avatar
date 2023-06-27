@@ -5,13 +5,13 @@ async function main() {
     const contract = await NftContractProvider.getContract();
 
     // Disable whitelist sale (if needed)
-  if (((await contract.feature(3)).isOpen)) {
-    console.log('Disabling guaranted...');
+  if (((await contract.feature(2)).isOpen)) {
+    console.log('Disabling fcfs...');
 
-    await (await contract.openWhitelistMint(3, false)).wait();
+    await (await contract.toggleMintPhase(3, false)).wait();
   }
     
-    console.log("Guaranted has been disabled!");
+    console.log("FCFS has been disabled!");
 }
 
 main().catch((error) => {

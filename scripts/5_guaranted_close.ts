@@ -5,13 +5,13 @@ async function main() {
     const contract = await NftContractProvider.getContract();
 
     // Disable whitelist sale (if needed)
-  if (((await contract.feature(1)).isOpen)) {
-    console.log('Disabling freemint...');
+  if (((await contract.feature(2)).isOpen)) {
+    console.log('Disabling guaranted...');
 
-    await (await contract.openWhitelistMint(1, false)).wait();
+    await (await contract.toggleMintPhase(2, false)).wait();
   }
     
-    console.log("Free mint has been disabled!");
+    console.log("Guaranted has been disabled!");
 }
 
 main().catch((error) => {

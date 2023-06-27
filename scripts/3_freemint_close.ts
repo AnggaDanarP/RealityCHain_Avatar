@@ -5,13 +5,13 @@ async function main() {
     const contract = await NftContractProvider.getContract();
 
     // Disable whitelist sale (if needed)
-  if (((await contract.feature(2)).isOpen)) {
-    console.log('Disabling fcfs...');
+    if ((await contract.feature(1)).isOpen) {
+      console.log('Enabling freemint...');
 
-    await (await contract.openWhitelistMint(2, false)).wait();
+      await contract.toggleMintPhase(1, false);
   }
     
-    console.log("FCFS has been disabled!");
+    console.log("Free mint has been disabled!");
 }
 
 main().catch((error) => {
