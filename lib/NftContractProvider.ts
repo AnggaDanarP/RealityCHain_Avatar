@@ -14,7 +14,7 @@ export default class NftContractProvider {
         throw '\x1b[31merror\x1b[0m ' + `Can't find a contract deployed to the target address: ${CollectionConfig.contractAddress}`;
         }
         
-        return await ethers.getContractAt(CollectionConfig.contractName, CollectionConfig.contractAddress) as ContractType;
+        return await ethers.getContractAt(CollectionConfig.contractName, CollectionConfig.contractAddress) as unknown as ContractType;
     }
 };
   

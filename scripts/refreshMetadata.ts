@@ -1,34 +1,45 @@
 import NftContractProvider from "../lib/NftContractProvider";
 import CollectionConfig from "../config/CollectionConfig";
-import axios from "axios";
+import { Network, Alchemy } from "alchemy-sdk";
 
-async function refreshMetadata(contractAddress: string, tokenId: string): Promise<void> {
-    const url = `https://api.opensea.io/api/v1/asset/${contractAddress}/${tokenId}/?force_update=true`;
-  
-    try {
-      const response = await axios.get(url);
-      console.log(`Metadata refreshed successfully for token ${tokenId}:`, response.data);
-    } catch (error) {
-      console.error(`Failed to refresh metadata for token ${tokenId}:`, error);
-    }
+const settings = {
+  apiKey: "demo",
+  network: Network.ETH_MAINNET,
+};
+
+const alchemy = new Alchemy(settings);
+
+async function getNFTMetadata(nftContractAddress: string, tokenId: number) {
+  const response = await alchemy.nft.getNftMetadata(
+    nftContractAddress,
+    tokenId
+  );
+  return response;
 }
 
 async function main() {
-
-  const contract = await NftContractProvider.getContract();
-  const totalTokens = await contract.totalSupply();
-
   if (null === CollectionConfig.contractAddress) {
-    throw '\x1b[31merror\x1b[0m ' + 'Please add the contract address to the configuration before running this command.';
+    throw (
+      "\x1b[31merror\x1b[0m " +
+      "Please add the contract address to the configuration before running this command."
+    );
   }
 
-  for (let i = 1; i <= totalTokens; i++) {
-    const tokenId = String(i);
-    await refreshMetadata(CollectionConfig.contractAddress, tokenId);
+  const contract = await NftContractProvider.getContract();
+
+  const tokenId = await contract.totalSupply();
+
+  for (let i = 1; i <= tokenId; i++) {
+    try {
+      await getNFTMetadata(CollectionConfig.contractAddress, i);
+      console.log("NFT Metadata success in token id", i);
+    } catch (error) {
+      console.log("NFT Metadata error in token id", i);
+    }
   }
 }
 
 main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
+  console.error(error);
+  process.exitCode = 1;
 });
