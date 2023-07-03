@@ -65,8 +65,8 @@ describe(CollectionConfig.contractName, function () {
   });
 
   it("Check initial data", async function () {
-    expect(await contract.name()).to.equal("Testing-LOG");
-    expect(await contract.symbol()).to.equal("TLOG");
+    expect(await contract.name()).to.equal("League of Guardians");
+    expect(await contract.symbol()).to.equal("LOG");
 
     // public mint
     expect((await contract.feature(0)).supply).to.equal(2600);
@@ -754,7 +754,7 @@ describe(CollectionConfig.contractName, function () {
 
   it('Royalties', async function () {
     // set royalties
-    await contract.setRoyalties("0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18", 500);
+    // await contract.setRoyalties("0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18", 500);
 
 
     const tokenOwner = await contract.balanceOf(await owner.getAddress());
@@ -765,27 +765,27 @@ describe(CollectionConfig.contractName, function () {
     // check royalties from token owner
     for (const i of [tokenOwner]) {
       let info = await contract.royaltyInfo(i, 100);
-        expect(info[0]).to.equal("0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18"); // artist address
+        expect(info[0]).to.equal("0x50940964eA7eF3E75Cf2929E0FBeE1b90Bd65F24"); // artist address
         expect(info[1]).to.equal(5); // percentage of royalties
     }
 
     // check royalties from token whitelist
     for (const i of [tokenWhitelist]) {
       let info = await contract.royaltyInfo(i, 100);
-        expect(info[0]).to.equal("0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18"); // artist address
+        expect(info[0]).to.equal("0x50940964eA7eF3E75Cf2929E0FBeE1b90Bd65F24"); // artist address
         expect(info[1]).to.equal(5); // percentage of royalties
     }
 
     // check royalties from token holder
     for (const i of [tokenHolder]) {
       let info = await contract.royaltyInfo(i, 100);
-        expect(info[0]).to.equal("0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18"); // artist address
+        expect(info[0]).to.equal("0x50940964eA7eF3E75Cf2929E0FBeE1b90Bd65F24"); // artist address
         expect(info[1]).to.equal(5); // percentage of royalties
     }
 
     for (const i of [tokenUnknown]) {
       let info = await contract.royaltyInfo(i, 100);
-        expect(info[0]).to.equal("0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18"); // artist address
+        expect(info[0]).to.equal("0x50940964eA7eF3E75Cf2929E0FBeE1b90Bd65F24"); // artist address
         expect(info[1]).to.equal(5); // percentage of royalties
     }
   });

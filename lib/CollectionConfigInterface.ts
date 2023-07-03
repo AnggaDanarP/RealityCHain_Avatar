@@ -5,7 +5,6 @@ export default interface CollectionConfigInterface {
     testnet: NetworkConfigInterface;
     mainnet: NetworkConfigInterface;
     contractName: string;
-    durationLockToken: number;
     hiddenMetadata: string;
     contractAddress: string|null;
     freeMintAddress: string[];

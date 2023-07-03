@@ -29,6 +29,10 @@ async function main() {
         await (await contract.toggleMintPhase(2, false)).wait();
     }
 
+    // const rootHash = 0x00;
+    // console.log(`Updating the root hash to: ${rootHash}`);
+    // await contract.setMerkleRoot(3, rootHash);
+
     // Enable whitelist sale (if needed)
     if (!(await contract.feature(3)).isOpen) {
         console.log('Enabling fcfs...');

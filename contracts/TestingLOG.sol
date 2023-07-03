@@ -182,11 +182,10 @@ contract TestingLOG is
         if (_amount < 1) revert AddressAlreadyClaimOrNotListed();
     }
 
-    function _getSupplyLeftOver() private view returns (uint256) {
+    function _getTotalMinted() private view returns (uint256) {
         uint256 _totalSupply = totalSupply();
-        uint256 _tokenFreeMint = feature[PhaseMint.freeMint].minted - 1;
-        uint256 _maxSupply = MAX_SUPPLY;
-        return _maxSupply - (_totalSupply + _tokenFreeMint);
+        uint256 _tokenFreeMint = feature[PhaseMint.freeMint].minted;
+        return (_totalSupply + _tokenFreeMint) - 1;
     }
 
     // ===================================================================
@@ -307,8 +306,9 @@ contract TestingLOG is
     function toggleMintPhase(PhaseMint _phase, bool toggle) external onlyOwner {
         if (toggle) {
             if (_phase == PhaseMint.fcfs || _phase == PhaseMint.publicSale) {
-                uint256 _setSupply = _getSupplyLeftOver();
-                feature[_phase].supply = _setSupply;
+                uint256 _nftAlreadyMinted = _getTotalMinted();
+                uint256 _maxSupply = MAX_SUPPLY;
+                feature[_phase].supply = _maxSupply - _nftAlreadyMinted;
             }
         }
         feature[_phase].isOpen = toggle;
@@ -335,7 +335,7 @@ contract TestingLOG is
     function withdraw() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         if (balance == 0) revert InsufficientFunds();
-        (bool os, ) = payable(0x21d1E1577689550148722737aEB0aE6935941aaa).call{value: address(this).balance}("");
+        (bool os, ) = payable(0xb254827b7FeD9351a5c0f845B9c1EEF759c701Eb).call{value: address(this).balance}("");
         require(os);
     }
 
@@ -354,6 +354,10 @@ contract TestingLOG is
         address logHolder
     ) external view returns (uint256) {
         return _addressClaim[logHolder][_phase];
+    }
+
+    function totalMinted() external view returns (uint256) {
+        return _getTotalMinted();
     }
 
     // ===================================================================
