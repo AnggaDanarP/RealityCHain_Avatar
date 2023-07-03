@@ -20,8 +20,8 @@ async function main() {
     //update root hash (if changed)
     // if ((await contract.feature(1)).merkleRoot !== rootHash) {
     //     console.log(`Updating the root hash to: ${rootHash}`);
-    
-    //     await contract.setMerkleRoot(1, rootHash);
+    const merkelRoot = 0x00;
+    await contract.setMerkleRoot(1, merkelRoot);
     // }
 
     // Enable whitelist sale (if needed)

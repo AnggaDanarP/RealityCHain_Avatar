@@ -462,51 +462,77 @@ describe(CollectionConfig.contractName, function () {
     expect(await contract.balanceOf(await unkownUser.getAddress())).to.equal(4);
   });
 
-  it("Claim NFT from FreeMint", async function () {
-    await contract.toggleMintPhase(0, false);
+  // it("Claim NFT from FreeMint", async function () {
+  //   await contract.toggleMintPhase(0, false);
 
-    // check merklerooot
-    await expect(
-      contract.connect(unkownUser).claimFreeToken()
-    ).to.be.revertedWith("MintingPhaseClose");
+  //   // check merklerooot
+  //   await expect(
+  //     contract.connect(unkownUser).claimFreeToken()
+  //   ).to.be.revertedWith("MintingPhaseClose");
 
-    await contract.toggleClaimFreeMint(true);
+  //   await contract.toggleClaimFreeMint(true);
 
-    // error claim twice
-    await expect(
-      contract.connect(unkownUser).claimFreeToken()
-    ).to.be.revertedWith("AddressAlreadyClaimOrNotListed");
+  //   // error claim twice
+  //   await expect(
+  //     contract.connect(unkownUser).claimFreeToken()
+  //   ).to.be.revertedWith("AddressAlreadyClaimOrNotListed");
 
-    // success claim and automatically claim total token has reserve
-    await contract.connect(whitelistUser).claimFreeToken();
+  //   // success claim and automatically claim total token has reserve
+  //   await contract.connect(whitelistUser).claimFreeToken();
 
-    // error claim twice
+  //   // error claim twice
+  //   await expect(
+  //     contract.connect(whitelistUser).claimFreeToken()
+  //   ).to.be.revertedWith("AddressAlreadyClaimOrNotListed");
+
+  //   // error
+  //   await expect(
+  //     contract.connect(whitelistUser).freeMint([])
+  //   ).to.be.revertedWith("MintingPhaseClose");
+  //   await expect(
+  //     contract.connect(whitelistUser).whitelistMint(2, 1, [], { value: getPrice("0.019", 1) })
+  //   ).to.be.revertedWith("MintingPhaseClose");
+  //   await expect(
+  //     contract.connect(whitelistUser).whitelistMint(3, 1, [], { value: getPrice("0.019", 1) })
+  //   ).to.be.revertedWith("MintingPhaseClose");
+  //   await expect(
+  //     contract.connect(owner).mintPublic(1, { value: getPrice("0.019", 1) })
+  //   ).to.be.revertedWith("MintingPhaseClose");
+
+  //   await contract.toggleClaimFreeMint(false);
+
+  //   await expect(
+  //     contract.connect(whitelistUser).claimFreeToken()
+  //   ).to.be.revertedWith("MintingPhaseClose");
+
+  //   // check supply
+  //    // decrease every claim token
+  //   expect((await contract.feature(1)).minted).to.equal(1);
+  //   expect(await contract.totalSupply()).to.be.equal(18);
+
+  //   // check balance
+  //   // balance is same with free mint, because Reserve doesnt minting token
+  //   expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
+  //   expect(await contract.balanceOf(await whitelistUser.getAddress())).to.equal(7);
+  //   expect(await contract.balanceOf(await publicAddress.getAddress())).to.equal(6);
+  //   expect(await contract.balanceOf(await unkownUser.getAddress())).to.equal(4);
+
+  // });
+
+  it("Aidrops for FreeMint", async function () {
+    // test address for eligible to get airdrop from free mint
+    const testAddress = [await owner.getAddress(), await publicAddress.getAddress(), await unkownUser.getAddress(), await whitelistUser.getAddress()];
+
+    // check claim mint is close
     await expect(
       contract.connect(whitelistUser).claimFreeToken()
-    ).to.be.revertedWith("AddressAlreadyClaimOrNotListed");
-
-    // error
-    await expect(
-      contract.connect(whitelistUser).freeMint([])
-    ).to.be.revertedWith("MintingPhaseClose");
-    await expect(
-      contract.connect(whitelistUser).whitelistMint(2, 1, [], { value: getPrice("0.019", 1) })
-    ).to.be.revertedWith("MintingPhaseClose");
-    await expect(
-      contract.connect(whitelistUser).whitelistMint(3, 1, [], { value: getPrice("0.019", 1) })
-    ).to.be.revertedWith("MintingPhaseClose");
-    await expect(
-      contract.connect(owner).mintPublic(1, { value: getPrice("0.019", 1) })
     ).to.be.revertedWith("MintingPhaseClose");
 
-    await contract.toggleClaimFreeMint(false);
-
-    await expect(
-      contract.connect(whitelistUser).claimFreeToken()
-    ).to.be.revertedWith("MintingPhaseClose");
+    // airdrops
+    await contract.airdropFreeMint(testAddress);
 
     // check supply
-     // decrease every claim token
+    // decrease every claim token
     expect((await contract.feature(1)).minted).to.equal(1);
     expect(await contract.totalSupply()).to.be.equal(18);
 

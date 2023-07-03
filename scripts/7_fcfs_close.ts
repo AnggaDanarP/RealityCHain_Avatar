@@ -5,7 +5,7 @@ async function main() {
     const contract = await NftContractProvider.getContract();
 
     // Disable whitelist sale (if needed)
-  if (((await contract.feature(2)).isOpen)) {
+  if (((await contract.feature(3)).isOpen)) {
     console.log('Disabling fcfs...');
 
     await (await contract.toggleMintPhase(3, false)).wait();

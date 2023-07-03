@@ -34,8 +34,8 @@ contract TestingLOG is
     ReentrancyGuard,
     DefaultOperatorFilterer
 {
+    bool public toggleClaim;
     bool private _revealed;
-    bool private _toggleClaimFreeMint;
     string private _hiddenMetadata;
     string private _uriPrefix;
     uint256 private constant MAX_SUPPLY = 6666;
@@ -61,8 +61,9 @@ contract TestingLOG is
 
     constructor(
         string memory _hiddenMetadataUri
-    ) ERC721A("Testing-LOG", "TLOG") {
+    ) ERC721A("League of Guardians", "LOG") {
         _hiddenMetadata = _hiddenMetadataUri;
+        _setDefaultRoyalty(0x50940964eA7eF3E75Cf2929E0FBeE1b90Bd65F24, 500);
 
         feature[PhaseMint.publicSale] = PhaseSpec({
             merkleRoot: 0x00,
@@ -176,7 +177,7 @@ contract TestingLOG is
     }
 
     function _checkClaimFreeMint() private view {
-        if (!_toggleClaimFreeMint) revert MintingPhaseClose();
+        if (!toggleClaim) revert MintingPhaseClose();
         uint256 _amount = _addressClaim[_msgSender()][PhaseMint.freeMint];
         if (_amount < 1) revert AddressAlreadyClaimOrNotListed();
     }
@@ -256,6 +257,26 @@ contract TestingLOG is
         _safeMint(_msgSender(), 1);
     }
 
+    function airdropFreeMint(address[] calldata freeMintAddress) external onlyOwner {
+        uint256 addressLength = freeMintAddress.length;
+        uint256 _totalMintAirdrops;
+        for (uint8 i = 0; i < addressLength; ) {
+            address _freeMintAfddress = freeMintAddress[i];
+            uint256 _amount = _addressClaim[_freeMintAfddress][PhaseMint.freeMint];
+            if (_amount == 1) {
+                _addressClaim[_freeMintAfddress][PhaseMint.freeMint]--;
+                unchecked {
+                    ++_totalMintAirdrops;
+                }
+                _safeMint(_freeMintAfddress, 1);
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        feature[PhaseMint.freeMint].minted -= _totalMintAirdrops;
+    }
+
     function airdrops(
         address[] calldata receiver,
         uint256[] calldata mintAmount
@@ -294,7 +315,7 @@ contract TestingLOG is
     }
 
     function toggleClaimFreeMint(bool toggle) external onlyOwner {
-        _toggleClaimFreeMint = toggle;
+        toggleClaim = toggle;
     }
 
     function setHiddenMetadata(
@@ -314,7 +335,7 @@ contract TestingLOG is
     function withdraw() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         if (balance == 0) revert InsufficientFunds();
-        (bool os, ) = payable(owner()).call{value: address(this).balance}("");
+        (bool os, ) = payable(0x21d1E1577689550148722737aEB0aE6935941aaa).call{value: address(this).balance}("");
         require(os);
     }
 

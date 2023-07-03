@@ -21,8 +21,13 @@ async function main() {
     // if ((await contract.feature(2)).merkleRoot !== rootHash) {
     //     console.log(`Updating the root hash to: ${rootHash}`);
     
-    //     await contract.setMerkleRoot(2, rootHash);
+    //     await contract.setMerkleRoot(3, rootHash);
     // }
+    if (((await contract.feature(2)).isOpen)) {
+        console.log('Disabling guaranted...');
+    
+        await (await contract.toggleMintPhase(2, false)).wait();
+    }
 
     // Enable whitelist sale (if needed)
     if (!(await contract.feature(3)).isOpen) {
