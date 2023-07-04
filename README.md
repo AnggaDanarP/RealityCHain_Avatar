@@ -164,8 +164,8 @@ Wen we run the unit testing, it will appear the table of gass fee will be use fo
 3. check the prefix and hidden metadata
 4. name token and symbol
 5. address to withdrawal
-6. royalty address adn percentage
-7. rename smart contract file
+6. royalty address and percentage
+7. rename smart contract file (LOGverse)
 8. market place identifier
     
 
