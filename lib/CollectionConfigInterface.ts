@@ -10,6 +10,8 @@ export default interface CollectionConfigInterface {
     freeMintAddress: string[];
     fcfsAddress: string[];
     guarantedAddress: string[];
+    addressTreasury: string[];
+    amountTreasury: number[];
     marketplaceIdentifier: string;
     marketplaceConfig: MarketplaceConfigInterface;
 };

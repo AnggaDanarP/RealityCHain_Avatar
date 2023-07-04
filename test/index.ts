@@ -70,7 +70,7 @@ describe(CollectionConfig.contractName, function () {
     // public mint
     expect((await contract.feature(0)).supply).to.equal(2600);
     expect((await contract.feature(0)).cost).to.equal(
-      utils.parseEther("0.019")
+      utils.parseEther("0.015")
     );
     expect((await contract.feature(0)).maxAmountPerAddress).to.equal(3);
     expect((await contract.feature(0)).isOpen).to.equal(false);
@@ -86,7 +86,7 @@ describe(CollectionConfig.contractName, function () {
     // guaranteed mint
     expect((await contract.feature(2)).supply).to.equal(2000);
     expect((await contract.feature(2)).cost).to.equal(
-      utils.parseEther("0.019")
+      utils.parseEther("0.015")
     );
     expect((await contract.feature(2)).maxAmountPerAddress).to.equal(2);
     expect((await contract.feature(2)).isOpen).to.equal(false);
@@ -95,7 +95,7 @@ describe(CollectionConfig.contractName, function () {
     // fcfs mint
     expect((await contract.feature(3)).supply).to.equal(2600);
     expect((await contract.feature(3)).cost).to.equal(
-      utils.parseEther("0.019")
+      utils.parseEther("0.015")
     );
     expect((await contract.feature(3)).maxAmountPerAddress).to.equal(2);
     expect((await contract.feature(3)).isOpen).to.equal(false);

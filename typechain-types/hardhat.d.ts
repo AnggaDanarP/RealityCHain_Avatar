@@ -33,9 +33,9 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC165__factory>;
     getContractFactory(
-      name: "TestingLOG",
+      name: "LOGverse",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.TestingLOG__factory>;
+    ): Promise<Contracts.LOGverse__factory>;
     getContractFactory(
       name: "ERC721A__IERC721Receiver",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -87,10 +87,10 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IERC165>;
     getContractAt(
-      name: "TestingLOG",
+      name: "LOGverse",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.TestingLOG>;
+    ): Promise<Contracts.LOGverse>;
     getContractAt(
       name: "ERC721A__IERC721Receiver",
       address: string | ethers.Addressable,
@@ -143,9 +143,9 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC165>;
     deployContract(
-      name: "TestingLOG",
+      name: "LOGverse",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.TestingLOG>;
+    ): Promise<Contracts.LOGverse>;
     deployContract(
       name: "ERC721A__IERC721Receiver",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -197,10 +197,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC165>;
     deployContract(
-      name: "TestingLOG",
+      name: "LOGverse",
       args: any[],
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.TestingLOG>;
+    ): Promise<Contracts.LOGverse>;
     deployContract(
       name: "ERC721A__IERC721Receiver",
       args: any[],

@@ -4,17 +4,21 @@ import * as Marketpalce from "../lib/Marketplaces";
 import freeMintAddress from "./freeMint.json";
 import fcfsAddress from "./fcfs.json";
 import guarantedAddress from "./guarantedd.json";
+import addressTreasury from "./addressAirdrops.json";
+import amountTreasury from "./amountAirdrops.json";
 
 const CollectionConfig: CollectionConfigInterface = {
     testnet: Networks.ethereumTestnetGoerli,
     mainnet: Networks.ethereumMainnet,
-    contractName: "TestingLOG",
+    contractName: "LOGverse",
     hiddenMetadata: "ipfs://QmPTxix2vtL5t7eofJ71Hcwzoia7QhjfJLyj11gazEYgf2/LOG.json",
-    contractAddress: "0x830e948e63AcF3Dc2C7Be5cBdD30072A92585d66",
-    marketplaceIdentifier: "Univers-of-League-of-Guardians",
+    contractAddress: "0xCFC612B0c2ad7dc651E6608A5eE6695600BbdFF3",
+    marketplaceIdentifier: "League-of-Guardians-Universe",
     marketplaceConfig: Marketpalce.openSea,
     freeMintAddress,
     fcfsAddress,
+    addressTreasury,
+    amountTreasury,
     guarantedAddress
 };
 

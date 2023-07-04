@@ -159,14 +159,13 @@ Wen we run the unit testing, it will appear the table of gass fee will be use fo
 ![Gass Fee Table](gassFee/gass_fee_result.jpg)
 
 ## Change it before deploy in mainet
-1. private key
-2. Block explorer API to Ethereum
+1. private key                            x
+2. Block explorer API to Ethereum         x
 3. check the prefix and hidden metadata
-4. name token and symbol
-5. address to withdrawal
-6. royalty address and percentage
-7. rename smart contract file (LOGverse)
-8. market place identifier
+4. name token and symbol                  x
+5. address to withdrawal                  x
+6. royalty address and percentage         x
+7. rename smart contract file (LOGverse)  x
     
 
 

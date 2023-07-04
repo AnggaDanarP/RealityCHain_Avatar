@@ -37,6 +37,7 @@
     "reveal": "hardhat run scripts/13_reveal_phase_3.ts",
     "withdraw": "hardhat run scripts/14_withdraw.ts",
     "set-hidden": "hardhat run scripts/15_hidden_uri.ts",
+    "treasury": "hardhat run scripts/16_mint_treasury.ts",
     "refresh": "hardhat run scripts/refreshMetadata.ts"
   },
   "keywords": [],

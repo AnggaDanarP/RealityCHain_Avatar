@@ -20,8 +20,8 @@ export type { ERC165 } from "./@openzeppelin/contracts/utils/introspection/ERC16
 export { ERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/ERC165__factory";
 export type { IERC165 } from "./@openzeppelin/contracts/utils/introspection/IERC165";
 export { IERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/IERC165__factory";
-export type { TestingLOG } from "./contracts/TestingLOG";
-export { TestingLOG__factory } from "./factories/contracts/TestingLOG__factory";
+export type { LOGverse } from "./contracts/LOGverse";
+export { LOGverse__factory } from "./factories/contracts/LOGverse__factory";
 export type { ERC721A__IERC721Receiver } from "./erc721a/contracts/ERC721A.sol/ERC721A__IERC721Receiver";
 export { ERC721A__IERC721Receiver__factory } from "./factories/erc721a/contracts/ERC721A.sol/ERC721A__IERC721Receiver__factory";
 export type { ERC721A } from "./erc721a/contracts/ERC721A.sol/ERC721A";

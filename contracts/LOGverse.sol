@@ -27,7 +27,7 @@ error InvalidProof();
 error ContractNotAllowed();
 error ProxyNotAllowed();
 
-contract TestingLOG is
+contract LOGverse is
     ERC721A,
     ERC2981,
     Ownable,
@@ -68,7 +68,7 @@ contract TestingLOG is
         feature[PhaseMint.publicSale] = PhaseSpec({
             merkleRoot: 0x00,
             supply: 2600,
-            cost: 0.019 ether,
+            cost: 0.015 ether,
             maxAmountPerAddress: 3,
             isOpen: false,
             minted: 1
@@ -86,7 +86,7 @@ contract TestingLOG is
         feature[PhaseMint.guaranteed] = PhaseSpec({
             merkleRoot: 0x00,
             supply: 2000,
-            cost: 0.019 ether,
+            cost: 0.015 ether,
             maxAmountPerAddress: 2,
             isOpen: false,
             minted: 1
@@ -95,7 +95,7 @@ contract TestingLOG is
         feature[PhaseMint.fcfs] = PhaseSpec({
             merkleRoot: 0x00,
             supply: 2600,
-            cost: 0.019 ether,
+            cost: 0.015 ether,
             maxAmountPerAddress: 2,
             isOpen: false,
             minted: 1
@@ -335,7 +335,7 @@ contract TestingLOG is
     function withdraw() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         if (balance == 0) revert InsufficientFunds();
-        (bool os, ) = payable(0xb254827b7FeD9351a5c0f845B9c1EEF759c701Eb).call{value: address(this).balance}("");
+        (bool os, ) = payable(0x21d1E1577689550148722737aEB0aE6935941aaa).call{value: address(this).balance}("");
         require(os);
     }
 
