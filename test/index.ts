@@ -210,7 +210,7 @@ describe(CollectionConfig.contractName, function () {
       "0xa6868189B918F0F7Da6DDA3DF9962eeeF6Be6707",
       "0xF63061eeb5c91BE8BbfdB950ed18377aC8D0AE84",
       "0xF7f78Fb3aF2D451b2C2234d24C4f90D5fd7D04B3",
-      //"0x37e828389905Ba0156481366a611b0a98252338F",
+      "0x37e828389905Ba0156481366a611b0a98252338f",
       "0x234eA09C12030C29C9ecb5c448679Dc5CFd19ad5",
       "0xaf0754989981c500ad9769b5E6FD43028Da8d192",
       "0xd98fD6368534e06CBad02122b32abEda8e3e25a0",
@@ -265,10 +265,9 @@ describe(CollectionConfig.contractName, function () {
       "0xb346711903E656668fC19A5920836ab4121067dB",
     ];
     const amountToMintEachAddress = [
-      //2, 
       2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-      2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2,
-      1, 1, 1, 1, 2, 1, 143,
+      2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2,
+      2, 1, 1, 1, 1, 2, 1, 143,
     ];
 
     // error if we try to run with differen length value
@@ -282,10 +281,7 @@ describe(CollectionConfig.contractName, function () {
     ).to.be.revertedWith("WrongInputPhase");
 
     // succes airdrops treasury
-    await contract.airdrops(
-      addressTreasury,
-      amountToMintEachAddress,
-    );
+    await contract.airdrops(addressTreasury, amountToMintEachAddress);
   });
 
   it("Free mint Phase", async function () {
@@ -345,7 +341,7 @@ describe(CollectionConfig.contractName, function () {
 
     // check supply
     expect((await contract.feature(1)).minted).to.equal(2);
-    expect(await contract.totalSupply()).to.be.equal(258);
+    expect(await contract.totalSupply()).to.be.equal(260);
 
     // check balance
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
@@ -498,7 +494,7 @@ describe(CollectionConfig.contractName, function () {
 
     // check supply
     expect((await contract.feature(2)).minted).to.equal(3);
-    expect(await contract.totalSupply()).to.be.equal(260);
+    expect(await contract.totalSupply()).to.be.equal(262);
 
     // check balance
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
@@ -661,7 +657,7 @@ describe(CollectionConfig.contractName, function () {
 
     // check supply
     expect((await contract.feature(3)).minted).to.equal(3);
-    expect(await contract.totalSupply()).to.be.equal(262);
+    expect(await contract.totalSupply()).to.be.equal(264);
 
     // check balance
     // balance is same with free mint, because Reserve doesnt minting token
@@ -751,10 +747,10 @@ describe(CollectionConfig.contractName, function () {
 
     // check supply
     expect((await contract.feature(0)).minted).to.equal(4);
-    expect(await contract.totalSupply()).to.be.equal(265);
+    expect(await contract.totalSupply()).to.be.equal(267);
 
     // check balance
-    // balance is same with free mint, because Reserve doesnt minting token
+    // balance is same with free mint, because Reserve doesn minting token
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(1);
     expect(await contract.balanceOf(await whitelistUser.getAddress())).to.equal(
       6
@@ -842,7 +838,7 @@ describe(CollectionConfig.contractName, function () {
     // check supply
     // decrease every claim token
     expect((await contract.feature(1)).minted).to.equal(1);
-    expect(await contract.totalSupply()).to.be.equal(266);
+    expect(await contract.totalSupply()).to.be.equal(268);
 
     // check balance
     // balance is same with free mint, because Reserve doesnt minting token
