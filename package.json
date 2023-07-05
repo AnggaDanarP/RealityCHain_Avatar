@@ -38,7 +38,8 @@
     "withdraw": "hardhat run scripts/14_withdraw.ts",
     "set-hidden": "hardhat run scripts/15_hidden_uri.ts",
     "treasury": "hardhat run scripts/16_mint_treasury.ts",
-    "airdrop-freemint": "hardhat run scripts/17_airdrop_freeMint.ts",
+    "get-airdrop-freemint": "hardhat run scripts/17_get_airdrop_freeMint.ts",
+    "aidrop-freemint": "hardhat run scripts/18_airdrop_freeMint.ts",
     "refresh": "hardhat run scripts/refreshMetadata.ts"
   },
   "keywords": [],

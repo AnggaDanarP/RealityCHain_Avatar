@@ -12,6 +12,7 @@ async function main() {
     const contract = await NftContractProvider.getContract();
 
     // check the address is get the ticket
+    console.log("Processing....");
     for (let i = 0; i < CollectionConfig.freeMintAddress.length; i++) {
         if (Number(await contract.getAddressAlreadyClaimed(1, CollectionConfig.freeMintAddress[i])) == 1) {
             freeMintAddressAirdrop.push(CollectionConfig.freeMintAddress[i]);
@@ -19,7 +20,7 @@ async function main() {
         }
     }
     console.log("Banyak address airdrop: ", freeMintAddressAirdrop.length);
-
+    console.log("Success!!!");
 }
 
 main().catch((error) => {
