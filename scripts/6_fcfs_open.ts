@@ -23,6 +23,14 @@ async function main() {
     
     //     await contract.setMerkleRoot(3, rootHash);
     // }
+    // Enable whitelist sale (if needed)
+    if (!(await contract.feature(3)).isOpen) {
+        console.log('Enabling fcfs...');
+
+        await contract.toggleMintPhase(3, true);
+    }
+    console.log("FCFS has been enabled!");
+
     if (((await contract.feature(2)).isOpen)) {
         console.log('Disabling guaranted...');
     
@@ -32,16 +40,8 @@ async function main() {
     // const rootHash = 0x00;
     // console.log(`Updating the root hash to: ${rootHash}`);
     // await contract.setMerkleRoot(3, rootHash);
-
-    // Enable whitelist sale (if needed)
-    if (!(await contract.feature(3)).isOpen) {
-        console.log('Enabling fcfs...');
-
-        await contract.toggleMintPhase(3, true);
-    }
     const supply = (await contract.feature(3)).supply;
     console.log(`Public sale is now open with ${supply} NFT`);
-    console.log("FCFS has been enabled!");
 }
 
 main().catch((error) => {
