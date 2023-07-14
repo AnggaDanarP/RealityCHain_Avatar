@@ -5,13 +5,10 @@ export default interface CollectionConfigInterface {
     testnet: NetworkConfigInterface;
     mainnet: NetworkConfigInterface;
     contractName: string;
-    hiddenMetadata: string;
+    tokenName: string;
+    tokenSymbol: string;
     contractAddress: string|null;
-    freeMintAddress: string[];
-    fcfsAddress: string[];
-    guarantedAddress: string[];
-    addressTreasury: string[];
-    amountTreasury: number[];
+    whitelistAddress: string[];
     marketplaceIdentifier: string;
     marketplaceConfig: MarketplaceConfigInterface;
 };
