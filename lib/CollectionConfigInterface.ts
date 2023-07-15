@@ -8,7 +8,9 @@ export default interface CollectionConfigInterface {
     tokenName: string;
     tokenSymbol: string;
     contractAddress: string|null;
-    whitelistAddress: string[];
+    legendaryAddress: string[];
+    epicAddress: string[];
+    rareAddress: string[];
     marketplaceIdentifier: string;
     marketplaceConfig: MarketplaceConfigInterface;
 };

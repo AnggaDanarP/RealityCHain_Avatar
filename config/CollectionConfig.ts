@@ -1,7 +1,9 @@
 import CollectionConfigInterface from "../lib/CollectionConfigInterface";
 import * as Networks from "../lib/Networks";
 import * as Marketpalce from "../lib/Marketplaces";
-import whitelistAddress from "./whitelist.json";
+import legendaryAddress from "./legendaryAddress.json";
+import epicAddress from "./epicAddress.json";
+import rareAddress from "./rareAddress.json";
 
 const CollectionConfig: CollectionConfigInterface = {
     testnet: Networks.ethereumTestnetGoerli,
@@ -12,7 +14,9 @@ const CollectionConfig: CollectionConfigInterface = {
     contractAddress: "0xCFC612B0c2ad7dc651E6608A5eE6695600BbdFF3",
     marketplaceIdentifier: "League-of-Guardians-Universe",
     marketplaceConfig: Marketpalce.openSea,
-    whitelistAddress
+    legendaryAddress,
+    epicAddress,
+    rareAddress
 };
 
 export default CollectionConfig;
