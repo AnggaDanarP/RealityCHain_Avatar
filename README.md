@@ -158,14 +158,4 @@ This function is drain the fund. The rule is smart contract need to be paused.
 Wen we run the unit testing, it will appear the table of gass fee will be use for the smart contract. And in this update the gass fee esplaine in image table bellow
 ![Gass Fee Table](gassFee/gass_fee_result.jpg)
 
-## Change it before deploy in mainet
-1. whitelist json for legenday, epic, and rare                  x
-2. setup the config for the json files                          x
-3. update hardhat config files for setup root and merkle proof  x
-3.5 scripting withdrawing and set merkleroot                    x
-4. unit testing 
-5. check gass fee and reporting for gass fee
-6. check security using slither
-    
-
 

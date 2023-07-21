@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -12,7 +12,6 @@ error InsufficientFunds();
 error InvalidProof();
 
 contract TestRealityChainAvatar is ERC721URIStorage, Ownable, ReentrancyGuard {
-
     struct NftAvatarSpec {
         bytes32 merkleRoot;
         uint256 supply;
@@ -58,17 +57,27 @@ contract TestRealityChainAvatar is ERC721URIStorage, Ownable, ReentrancyGuard {
     // ===================================================================
     //                           PRIVATE FUNCTION
     // ===================================================================
-    function _mintCompliance(
+    function totalMinted() private view returns (uint256) {
+        uint256 _legendaryMinted = avatar[TierAvatar.legendary].minted;
+        uint256 _epicMinted = avatar[TierAvatar.epic].minted;
+        uint256 _rareMinted = avatar[TierAvatar.rare].minted;
+        return (_legendaryMinted + _epicMinted + _rareMinted) - 3;
+    }
+
+    // ===================================================================
+    //                                MINT
+    // ===================================================================
+    function mint(
         TierAvatar _tier,
-        address _holder,
-        bytes32[] calldata _merkleProof
-    ) private view {
+        bytes32[] calldata _merkleProof,
+        string memory tokenUriAvatar
+    ) external payable {
         bytes32 _leaf = keccak256(abi.encodePacked(_msgSender()));
         bytes32 _merkleRoot = avatar[_tier].merkleRoot;
         if (!MerkleProof.verify(_merkleProof, _merkleRoot, _leaf)) {
             revert InvalidProof();
         }
-        if (addressClaim[_holder]) {
+        if (addressClaim[msg.sender]) {
             revert ExceedeedTokenClaiming();
         }
         uint256 _costPhase = avatar[_tier].cost;
@@ -80,31 +89,6 @@ contract TestRealityChainAvatar is ERC721URIStorage, Ownable, ReentrancyGuard {
         if (_alreadyMinted > _supplyPhase) {
             revert SupplyExceedeed();
         }
-    }
-
-    function totalMinted() private view returns(uint256) {
-        uint256 _legendaryMinted = avatar[TierAvatar.legendary].minted;
-        uint256 _epicMinted = avatar[TierAvatar.epic].minted;
-        uint256 _rareMinted = avatar[TierAvatar.rare].minted;
-        return (_legendaryMinted + _epicMinted + _rareMinted) - 3;
-    }
-
-    // ===================================================================
-    //                              MODIFIER
-    // ===================================================================
-    modifier mintCompliance(TierAvatar _tier, bytes32[] calldata _merkleProof) {
-        _mintCompliance(_tier, msg.sender, _merkleProof);
-        _;
-    }
-
-    // ===================================================================
-    //                                MINT
-    // ===================================================================
-    function mint(
-        TierAvatar _tier,
-        bytes32[] calldata _merkleProof,
-        string memory tokenUriAvatar
-    ) external payable mintCompliance(_tier, _merkleProof) {
         addressClaim[_msgSender()] = true;
         avatar[_tier].minted++;
         uint256 _tokenId = totalMinted();
@@ -140,7 +124,7 @@ contract TestRealityChainAvatar is ERC721URIStorage, Ownable, ReentrancyGuard {
         return addressClaim[logHolder];
     }
 
-    function totalSupply() public view returns(uint256) {
+    function totalSupply() public view returns (uint256) {
         return totalMinted();
     }
 }
