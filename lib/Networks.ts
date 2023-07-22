@@ -16,7 +16,7 @@ export const hardhatLocal: NetworkConfigInterface = {
 /*
  * Ethereum 
  */
-export const ethereumTestnetSepolia: NetworkConfigInterface = {
+export const ethereumTest: NetworkConfigInterface = {
     chainId: 11155111,
     symbol: " SepoliaETH",
     blockExplorer: {
@@ -26,7 +26,7 @@ export const ethereumTestnetSepolia: NetworkConfigInterface = {
     },
 }
 
-export const ethereumTestnetGoerli: NetworkConfigInterface = {
+export const ethereumTestnet: NetworkConfigInterface = {
     chainId: 5,
     symbol: "ETH (test)",
     blockExplorer: {
@@ -66,5 +66,28 @@ export const polygonMainnet: NetworkConfigInterface = {
         name: "Polygonscan",
         generatorContractUrl: (contractAddress: string) => `https://polygonscan.com/address/${contractAddress}`,
         generateTransactionUrl: (transactionAddress: string) => `https://polygonscan.com/tx/${transactionAddress}`,
+    },
+}
+
+/*
+ * Arbitrum
+ */
+export const arbitrumGoerli: NetworkConfigInterface = {
+    chainId: 421613,
+    symbol: "AGOR (test)",
+    blockExplorer: {
+        name: "Arbitrum Goerli",
+        generatorContractUrl: (contractAddress: string) => `https://goerli-rollup-explorer.arbitrum.io/address/${contractAddress}`,
+        generateTransactionUrl: (transactionAddress: string) => `https://goerli-rollup-explorer.arbitrum.io/tx/${transactionAddress}`,
+    },
+}
+
+export const arbitrumOne: NetworkConfigInterface = {
+    chainId: 42161,
+    symbol: "ETH",
+    blockExplorer: {
+        name: "Arbitrum One",
+        generatorContractUrl: (contractAddress: string) => `https://explorer.arbitrum.io/address/${contractAddress}`,
+        generateTransactionUrl: (transactionAddress: string) => `https://explorer.arbitrum.io/tx/${transactionAddress}`,
     },
 }

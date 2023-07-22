@@ -6,8 +6,8 @@ import epicAddress from "./epicAddress.json";
 import rareAddress from "./rareAddress.json";
 
 const CollectionConfig: CollectionConfigInterface = {
-    testnet: Networks.ethereumTestnetGoerli,
-    mainnet: Networks.ethereumMainnet,
+    testnet: Networks.arbitrumGoerli,
+    mainnet: Networks.arbitrumOne,
     contractName: "TestRealityChainAvatar",
     tokenName: "Test Reality Chain Avatar",
     tokenSymbol: "TRCA",
