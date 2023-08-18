@@ -11,7 +11,7 @@ const CollectionConfig: CollectionConfigInterface = {
     contractName: "TestRealityChainAvatar",
     tokenName: "Test Reality Chain Avatar",
     tokenSymbol: "TRCA",
-    contractAddress: "0xCFC612B0c2ad7dc651E6608A5eE6695600BbdFF3",
+    contractAddress: "0x8789151CC40d245d62b056B236ff657A795ab081",
     marketplaceIdentifier: "League-of-Guardians-Universe",
     marketplaceConfig: Marketpalce.openSea,
     legendaryAddress,

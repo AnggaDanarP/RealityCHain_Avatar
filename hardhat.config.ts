@@ -189,6 +189,7 @@ const config: HardhatUserConfig = {
       sepolia: process.env.BLOCK_EXPLORER_API_KEY!,
       rinkeby: process.env.BLOCK_EXPLORER_API_KEY!,
       mainnet: process.env.BLOCK_EXPLORER_API_KEY!,
+      arbitrumGoerli: process.env.BLOCK_EXPLORER_API_KEY!,
       // Polygon
       polygon: process.env.BLOCK_EXPLORER_API_KEY!,
       polygonMumbai: process.env.BLOCK_EXPLORER_API_KEY!,
