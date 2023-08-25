@@ -44,18 +44,24 @@ describe(CollectionConfig.contractName, async function () {
 
     // Legendary avatar spesification
     expect((await contract.avatar(0)).supply).to.equal(50);
+    expect((await contract.avatar(0)).maxAmountPerAddress).to.equal(1);
     expect((await contract.avatar(0)).cost).to.equal(utils.parseEther("0.05"));
     expect((await contract.avatar(0)).minted).to.equal(1);
+    expect((await contract.avatar(0)).isOpen).to.equal(false);
 
     // Epic avatar spesification
     expect((await contract.avatar(1)).supply).to.equal(950);
+    expect((await contract.avatar(1)).maxAmountPerAddress).to.equal(3);
     expect((await contract.avatar(1)).cost).to.equal(utils.parseEther("0.03"));
     expect((await contract.avatar(1)).minted).to.equal(1);
+    expect((await contract.avatar(1)).isOpen).to.equal(false);
     
     // Rare avatar spesification
     expect((await contract.avatar(2)).supply).to.equal(2000);
+    expect((await contract.avatar(2)).maxAmountPerAddress).to.equal(5);
     expect((await contract.avatar(2)).cost).to.equal(utils.parseEther("0.01"));
     expect((await contract.avatar(2)).minted).to.equal(1);
+    expect((await contract.avatar(2)).isOpen).to.equal(false);
 
     expect(await contract.totalSupply()).to.equal(0);
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(0);
@@ -71,18 +77,18 @@ describe(CollectionConfig.contractName, async function () {
     // nobody should be able to mint because merkle root is not in set
     // Legendary mint
     await expect(
-      contract.connect(legendaryMinter).mint(0, [], "")
-    ).to.be.revertedWith("InvalidProof");
+      contract.connect(legendaryMinter).mintLegendary(1, [])
+    ).to.be.revertedWith("MintingClose");
 
     // Epic mint
     await expect(
-      contract.connect(epicMinter).mint(1, [], "")
-    ).to.be.revertedWith("InvalidProof");
+      contract.connect(epicMinter).mintEpic(1, [])
+    ).to.be.revertedWith("MintingClose");
 
     // Rare mint
     await expect(
-      contract.connect(rareMinter).mint(2, [], "")
-    ).to.be.revertedWith("InvalidProof");
+      contract.connect(rareMinter).mintRare(2)
+    ).to.be.revertedWith("MintingClose");
 
     await expect(contract.withdraw()).to.be.revertedWith("InsufficientFunds");
   });
@@ -96,9 +102,16 @@ describe(CollectionConfig.contractName, async function () {
       contract.connect(rareMinter).withdraw()
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
+    await expect(
+      contract.connect(epicMinter).toggleMintTier(0, true)
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+
   });
 
   it("Legendary Mint", async function () {
+    // open minting tier
+    await contract.toggleMintTier(0, true);
+
     const whitelistLegendaryAddresses = [
       "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
       "0x71bE63f3384f5fb98995898A86B02Fb2426c5788",
@@ -123,9 +136,8 @@ describe(CollectionConfig.contractName, async function () {
     await expect(
       contract
         .connect(epicMinter)
-        .mint(0,
+        .mintLegendary(1,
           merkleTree.getHexProof(keccak256(await epicMinter.getAddress())),
-          "",
           { value: getPrice("0.05", 1) }
         )
     ).to.be.revertedWith("InvalidProof");
