@@ -18,13 +18,11 @@ function getPrice(price: string, mintAmount: number) {
 describe(CollectionConfig.contractName, async function () {
   let contract!: NftContractType;
   let owner!: SignerWithAddress;
-  let legendaryMinter!: SignerWithAddress;
-  let epicMinter!: SignerWithAddress;
-  let rareMinter!: SignerWithAddress;
+  let whitelist!: SignerWithAddress;
+  let otherHolder!: SignerWithAddress;
 
   before(async function () {
-    [owner, legendaryMinter, epicMinter, rareMinter] =
-      await ethers.getSigners();
+    [owner, whitelist, otherHolder] = await ethers.getSigners();
   });
 
   it("Contract deployment", async function () {
@@ -55,7 +53,7 @@ describe(CollectionConfig.contractName, async function () {
     expect((await contract.avatar(1)).cost).to.equal(utils.parseEther("0.03"));
     expect((await contract.avatar(1)).minted).to.equal(1);
     expect((await contract.avatar(1)).isOpen).to.equal(false);
-    
+
     // Rare avatar spesification
     expect((await contract.avatar(2)).supply).to.equal(2000);
     expect((await contract.avatar(2)).maxAmountPerAddress).to.equal(5);
@@ -65,52 +63,58 @@ describe(CollectionConfig.contractName, async function () {
 
     expect(await contract.totalSupply()).to.equal(0);
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(0);
-    expect(await contract.balanceOf(await legendaryMinter.getAddress())).to.equal(0);
-    expect(await contract.balanceOf(await epicMinter.getAddress())).to.equal(0);
-    expect(await contract.balanceOf(await rareMinter.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await whitelist.getAddress())).to.equal(0);
+    expect(await contract.balanceOf(await otherHolder.getAddress())).to.equal(
+      0
+    );
 
     // keep tracking that there is no token ID = 0
-    await expect(contract.tokenURI(0)).to.be.revertedWith("ERC721: invalid token ID");
+    await expect(contract.tokenURI(0)).to.be.revertedWith(
+      "ERC721: invalid token ID"
+    );
   });
 
   it("Before any else", async function () {
     // nobody should be able to mint because merkle root is not in set
     // Legendary mint
     await expect(
-      contract.connect(legendaryMinter).mintLegendary(1, [])
+      contract.connect(whitelist).mintLegendary(1, [])
     ).to.be.revertedWith("MintingClose");
 
     // Epic mint
     await expect(
-      contract.connect(epicMinter).mintEpic(1, [])
+      contract.connect(whitelist).mintEpic(1, [])
     ).to.be.revertedWith("MintingClose");
 
     // Rare mint
-    await expect(
-      contract.connect(rareMinter).mintRare(2)
-    ).to.be.revertedWith("MintingClose");
+    await expect(contract.connect(whitelist).mintRare(2)).to.be.revertedWith(
+      "MintingClose"
+    );
 
     await expect(contract.withdraw()).to.be.revertedWith("InsufficientFunds");
   });
 
   it("Owner only functions", async function () {
     await expect(
-      contract.connect(legendaryMinter).setMerkleRoot(0, 0x00)
+      contract.connect(otherHolder).setMerkleRoot(0, 0x00)
     ).to.be.revertedWith("");
 
+    await expect(contract.connect(otherHolder).withdraw()).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );
+
     await expect(
-      contract.connect(rareMinter).withdraw()
+      contract.connect(otherHolder).toggleMint(0, true)
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(
-      contract.connect(epicMinter).toggleMintTier(0, true)
+      contract.connect(otherHolder).setTokenUri(1, "")
     ).to.be.revertedWith("Ownable: caller is not the owner");
-
   });
 
   it("Legendary Mint", async function () {
     // open minting tier
-    await contract.toggleMintTier(0, true);
+    await contract.toggleMint(0, true);
 
     const whitelistLegendaryAddresses = [
       "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
@@ -123,61 +127,91 @@ describe(CollectionConfig.contractName, async function () {
       "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E",
       "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
       "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-      await legendaryMinter.getAddress(),
+      await whitelist.getAddress(),
     ];
     // setup merkel root
-    const leafNodes = whitelistLegendaryAddresses.map((addr) => keccak256(addr));
-    const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true, });
+    const leafNodes = whitelistLegendaryAddresses.map((addr) =>
+      keccak256(addr)
+    );
+    const merkleTree = new MerkleTree(leafNodes, keccak256, {
+      sortPairs: true,
+    });
     const rootHash = merkleTree.getHexRoot();
+
+    // update merkle root in woring input tier
+    await expect(contract.setMerkleRoot(2, rootHash)).to.be.revertedWith(
+      "InvalidTierInput"
+    );
     // Update the root hash
     await (await contract.setMerkleRoot(0, rootHash)).wait();
 
     // check merklerooot
     await expect(
       contract
-        .connect(epicMinter)
-        .mintLegendary(1,
-          merkleTree.getHexProof(keccak256(await epicMinter.getAddress())),
+        .connect(otherHolder)
+        .mintLegendary(
+          1,
+          merkleTree.getHexProof(keccak256(await otherHolder.getAddress())),
           { value: getPrice("0.05", 1) }
         )
     ).to.be.revertedWith("InvalidProof");
     await expect(
       contract
-        .connect(rareMinter)
-        .mint(0,
-          merkleTree.getHexProof(keccak256(await rareMinter.getAddress())),
-          "",
+        .connect(otherHolder)
+        .mintLegendary(
+          1,
+          merkleTree.getHexProof(keccak256(await otherHolder.getAddress())),
           { value: getPrice("0.05", 1) }
         )
     ).to.be.revertedWith("InvalidProof");
 
+    // check mint amount to mint cause only 1 nft per address in tier legendary
+    await expect(
+      contract
+        .connect(whitelist)
+        .mintLegendary(
+          0,
+          merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
+          { value: getPrice("0.05", 1) }
+        )
+    ).to.be.revertedWith("CannotZeroAmount");
+    await expect(
+      contract
+        .connect(whitelist)
+        .mintLegendary(
+          2,
+          merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
+          { value: getPrice("0.05", 1) }
+        )
+    ).to.be.revertedWith("ExceedeedTokenClaiming");
+
     // check cost
     await expect(
       contract
-        .connect(legendaryMinter)
-        .mint(0,
-          merkleTree.getHexProof(keccak256(await legendaryMinter.getAddress())),
-          "",
+        .connect(whitelist)
+        .mintLegendary(
+          1,
+          merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
           { value: getPrice("0.04", 1) }
         )
     ).to.be.revertedWith("InsufficientFunds");
 
     // minting success
     await contract
-      .connect(legendaryMinter)
-      .mint(0,
-        merkleTree.getHexProof(keccak256(await legendaryMinter.getAddress())),
-        "", // this is metadata input CID from IPFS
+      .connect(whitelist)
+      .mintLegendary(
+        1,
+        merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
         { value: getPrice("0.05", 1) }
       );
 
-    // try to mint again
+    // try to mint again when max nft claim
     await expect(
       contract
-        .connect(legendaryMinter)
-        .mint(0,
-          merkleTree.getHexProof(keccak256(await legendaryMinter.getAddress())),
-          "",
+        .connect(whitelist)
+        .mintLegendary(
+          1,
+          merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
           { value: getPrice("0.05", 1) }
         )
     ).to.be.revertedWith("ExceedeedTokenClaiming");
@@ -187,24 +221,42 @@ describe(CollectionConfig.contractName, async function () {
     expect(await contract.totalSupply()).to.be.equal(1);
 
     // check balance
-    expect(await contract.balanceOf(await owner.getAddress())).to.equal(0);
-    expect(await contract.balanceOf(await legendaryMinter.getAddress())).to.equal(1);
-    expect(await contract.balanceOf(await epicMinter.getAddress())).to.equal(0);
-    expect(await contract.balanceOf(await rareMinter.getAddress())).to.equal(0);
+    expect(
+      await contract.getAddressAlreadyClaimed(0, await whitelist.getAddress())
+    ).to.equal(1);
+    expect(
+      await contract.getAddressAlreadyClaimed(1, await whitelist.getAddress())
+    ).to.equal(0);
+    expect(
+      await contract.getAddressAlreadyClaimed(2, await otherHolder.getAddress())
+    ).to.equal(0);
+
+    // close minting tier
+    await contract.toggleMint(0, false);
+
+    // try to mint when the feature is close
+    await expect(
+      contract.connect(whitelist).mintLegendary(1, [])
+    ).to.be.revertedWith("MintingClose");
   });
 
   it("Epic Mint", async function () {
+    // open minting tier
+    await contract.toggleMint(1, true);
+
     const whitelistEpicAddresses = [
       "0xcd3B766CCDd6AE721141F452C550Ca635964ce71",
       "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
       "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E",
       "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
       "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-      await epicMinter.getAddress(),
+      await whitelist.getAddress(),
     ];
     // setup merkel root
     const leafNodes = whitelistEpicAddresses.map((addr) => keccak256(addr));
-    const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true, });
+    const merkleTree = new MerkleTree(leafNodes, keccak256, {
+      sortPairs: true,
+    });
     const rootHash = merkleTree.getHexRoot();
     // Update the root hash
     await (await contract.setMerkleRoot(1, rootHash)).wait();
@@ -212,157 +264,180 @@ describe(CollectionConfig.contractName, async function () {
     // check merklerooot
     await expect(
       contract
-        .connect(legendaryMinter)
-        .mint(1,
-          merkleTree.getHexProof(keccak256(await legendaryMinter.getAddress())),
-          "",
-          { value: getPrice("0.03", 1) }
-        )
-    ).to.be.revertedWith("InvalidProof");
-    await expect(
-      contract
-        .connect(rareMinter)
-        .mint(1,
-          merkleTree.getHexProof(keccak256(await rareMinter.getAddress())),
-          "",
+        .connect(otherHolder)
+        .mintEpic(
+          1,
+          merkleTree.getHexProof(keccak256(await otherHolder.getAddress())),
           { value: getPrice("0.03", 1) }
         )
     ).to.be.revertedWith("InvalidProof");
 
+    // check mint amount to mint cause only 3 nft per address in tier legendary
+    await expect(
+      contract
+        .connect(whitelist)
+        .mintEpic(
+          0,
+          merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
+          { value: getPrice("0.03", 1) }
+        )
+    ).to.be.revertedWith("CannotZeroAmount");
+    await expect(
+      contract
+        .connect(whitelist)
+        .mintEpic(
+          4,
+          merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
+          { value: getPrice("0.03", 4) }
+        )
+    ).to.be.revertedWith("ExceedeedTokenClaiming");
+
     // check cost
     await expect(
       contract
-        .connect(epicMinter)
-        .mint(1,
-          merkleTree.getHexProof(keccak256(await epicMinter.getAddress())),
-          "",
+        .connect(whitelist)
+        .mintEpic(
+          1,
+          merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
           { value: getPrice("0.02", 1) }
         )
     ).to.be.revertedWith("InsufficientFunds");
 
     // minting success
     await contract
-      .connect(epicMinter)
-      .mint(1,
-        merkleTree.getHexProof(keccak256(await epicMinter.getAddress())),
-        "", // this is metadata input CID from IPFS
-        { value: getPrice("0.03", 1) }
+      .connect(whitelist)
+      .mintEpic(
+        2,
+        merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
+        { value: getPrice("0.03", 3) }
       );
 
-    // try to mint again
+    // try to mint again but mothe than maximum wallet can claim
     await expect(
       contract
-        .connect(epicMinter)
-        .mint(1,
-          merkleTree.getHexProof(keccak256(await epicMinter.getAddress())),
-          "",
-          { value: getPrice("0.03", 1) }
+        .connect(whitelist)
+        .mintEpic(
+          2,
+          merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
+          { value: getPrice("0.03", 2) }
         )
     ).to.be.revertedWith("ExceedeedTokenClaiming");
 
+    // minting success againt
+    await contract
+      .connect(whitelist)
+      .mintEpic(
+        1,
+        merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
+        { value: getPrice("0.03", 1) }
+      );
+
     // check supply
-    expect((await contract.avatar(1)).minted).to.equal(2);
-    expect(await contract.totalSupply()).to.be.equal(2);
+    expect((await contract.avatar(1)).minted).to.equal(4);
+    expect(await contract.totalSupply()).to.be.equal(4);
 
     // check balance
-    expect(await contract.balanceOf(await owner.getAddress())).to.equal(0);
-    expect(await contract.balanceOf(await legendaryMinter.getAddress())).to.equal(1);
-    expect(await contract.balanceOf(await epicMinter.getAddress())).to.equal(1);
-    expect(await contract.balanceOf(await rareMinter.getAddress())).to.equal(0);
+    expect(
+      await contract.getAddressAlreadyClaimed(0, await whitelist.getAddress())
+    ).to.equal(1);
+    expect(
+      await contract.getAddressAlreadyClaimed(1, await whitelist.getAddress())
+    ).to.equal(3);
+    expect(
+      await contract.getAddressAlreadyClaimed(2, await otherHolder.getAddress())
+    ).to.equal(0);
+
+    // close minting tier
+    await contract.toggleMint(1, false);
+
+    // try to mint when the feature is close
+    await expect(
+      contract.connect(whitelist).mintEpic(1, [])
+    ).to.be.revertedWith("MintingClose");
   });
 
   it("Rare Mint", async function () {
-    const whitelistRareAddresses = [
-      "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E",
-      "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
-      "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-      await rareMinter.getAddress(),
-    ];
-    // setup merkel root
-    const leafNodes = whitelistRareAddresses.map((addr) => keccak256(addr));
-    const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true, });
-    const rootHash = merkleTree.getHexRoot();
-    // Update the root hash
-    await (await contract.setMerkleRoot(2, rootHash)).wait();
+    // open minting tier
+    await contract.toggleMint(2, true);
 
-    // check merklerooot
+    // check mint amount to mint cause only 5 nft per address in tier legendary
     await expect(
-      contract
-        .connect(legendaryMinter)
-        .mint(2,
-          merkleTree.getHexProof(keccak256(await legendaryMinter.getAddress())),
-          "",
-          { value: getPrice("0.01", 1) }
-        )
-    ).to.be.revertedWith("InvalidProof");
+      contract.connect(otherHolder).mintRare(0, { value: getPrice("0.01", 1) })
+    ).to.be.revertedWith("CannotZeroAmount");
     await expect(
-      contract
-        .connect(epicMinter)
-        .mint(2,
-          merkleTree.getHexProof(keccak256(await epicMinter.getAddress())),
-          "",
-          { value: getPrice("0.01", 1) }
-        )
-    ).to.be.revertedWith("InvalidProof");
+      contract.connect(otherHolder).mintRare(6, { value: getPrice("0.01", 6) })
+    ).to.be.revertedWith("ExceedeedTokenClaiming");
 
     // check cost
     await expect(
-      contract
-        .connect(rareMinter)
-        .mint(2,
-          merkleTree.getHexProof(keccak256(await rareMinter.getAddress())),
-          "",
-          { value: getPrice("0.009", 1) }
-        )
+      contract.connect(otherHolder).mintRare(1, { value: getPrice("0.009", 1) })
     ).to.be.revertedWith("InsufficientFunds");
 
     // minting success
     await contract
-      .connect(rareMinter)
-      .mint(2,
-        merkleTree.getHexProof(keccak256(await rareMinter.getAddress())),
-        "", // this is metadata input CID from IPFS
-        { value: getPrice("0.01", 1) }
-      );
+      .connect(otherHolder)
+      .mintRare(3, { value: getPrice("0.01", 3) });
 
-    // try to mint again
+    // try to mint again but mothe than maximum wallet can claim
     await expect(
-      contract
-        .connect(rareMinter)
-        .mint(2,
-          merkleTree.getHexProof(keccak256(await rareMinter.getAddress())),
-          "",
-          { value: getPrice("0.01", 1) }
-        )
+      contract.connect(otherHolder).mintRare(3, { value: getPrice("0.01", 3) })
     ).to.be.revertedWith("ExceedeedTokenClaiming");
 
+    // minting success
+    await contract
+      .connect(otherHolder)
+      .mintRare(2, { value: getPrice("0.01", 2) });
+
     // check supply
-    expect((await contract.avatar(2)).minted).to.equal(2);
-    expect(await contract.totalSupply()).to.be.equal(3);
+    expect((await contract.avatar(2)).minted).to.equal(6);
+    expect(await contract.totalSupply()).to.be.equal(9);
 
     // check balance
-    expect(await contract.balanceOf(await owner.getAddress())).to.equal(0);
-    expect(await contract.balanceOf(await legendaryMinter.getAddress())).to.equal(1);
-    expect(await contract.balanceOf(await epicMinter.getAddress())).to.equal(1);
-    expect(await contract.balanceOf(await rareMinter.getAddress())).to.equal(1);
+    expect(
+      await contract.getAddressAlreadyClaimed(0, await whitelist.getAddress())
+    ).to.equal(1);
+    expect(
+      await contract.getAddressAlreadyClaimed(1, await whitelist.getAddress())
+    ).to.equal(3);
+    expect(
+      await contract.getAddressAlreadyClaimed(2, await otherHolder.getAddress())
+    ).to.equal(5);
+
+    // close minting tier
+    await contract.toggleMint(2, false);
+
+    // try to mint when the feature is close
+    await expect(contract.connect(whitelist).mintRare(1)).to.be.revertedWith(
+      "MintingClose"
+    );
   });
 
   it("Token URI generation", async function () {
     // assume the metadata is located in CID bellow
-    // const uriPrefix = "ipfs://QmPheZWCLHygMQLQiRVmAWD4YZBcgLndC1V3ZGVW8AECkW/";
-    // const uriSuffix = ".json";
+    const uriPrefix = "ipfs://QmPheZWCLHygMQLQiRVmAWD4YZBcgLndC1V3ZGVW8AECkW/";
+    const uriSuffix = ".json";
     const tokenAlreadyMinted = await contract.totalSupply();
 
     // Testing first and last minted tokens
     for (let i = 1; i <= tokenAlreadyMinted; i++) {
+      expect(await contract.tokenURI(i)).to.equal("");
+    }
+
+    // set metadata but we set it every token
+    for (let i = 1; i <= tokenAlreadyMinted; i++) {
+      await contract.setTokenUri(i, `${uriPrefix}${i}${uriSuffix}`);
+    }
+
+    for (let i = 1; i <= tokenAlreadyMinted; i++) {
       expect(await contract.tokenURI(i)).to.equal(
-        //`${uriPrefix}${i}${uriSuffix}`
-        ""
+        `${uriPrefix}${i}${uriSuffix}`
       );
     }
 
     // keep tracking that there is no token ID = 0
-    await expect(contract.tokenURI(0)).to.be.revertedWith("ERC721: invalid token ID");
+    await expect(contract.tokenURI(0)).to.be.revertedWith(
+      "ERC721: invalid token ID"
+    );
   });
 
   it("Withdraw", async function () {
@@ -430,27 +505,23 @@ describe(CollectionConfig.contractName, async function () {
   //     );
   // });
 
-  // it('Wallet of owner', async function () {
-  //   expect(await contract.tokensOfOwner(await owner.getAddress())).deep.equal([
-  //     Number(1),
-  //   ]);
-  //   expect(await contract.tokensOfOwner(await whitelistUser.getAddress())).deep.equal([
-  //     Number(2),
-  //     Number(5),
-  //     Number(6),
-  //     Number(7),
-  //     Number(8),
-  //     Number(11),
-  //   ]);
-  //   expect(await contract.tokensOfOwner(await publicAddress.getAddress())).deep.equal([
-  //     Number(3),
-  //     Number(9),
-  //     Number(10),
-  //   ]);
-  //   expect(await contract.tokensOfOwner(await unkownUser.getAddress())).deep.equal([
-  //     Number(4),
-  //   ]);
-  // });
+  it('Check token id that mint in correct tier', async function () {
+    // verifu that token id 1 is legendary token
+    expect(await contract.verifyTokenClaimInTier(0, Number(1))).to.be.equal(true);
+
+    // verifu that token id 2, 3, 4 is epic token
+    expect(await contract.verifyTokenClaimInTier(1, Number(2))).to.be.equal(true);
+    expect(await contract.verifyTokenClaimInTier(1, Number(3))).to.be.equal(true);
+    expect(await contract.verifyTokenClaimInTier(1, Number(4))).to.be.equal(true);
+
+    // verifu that token id 5, 6, 7, 8, 9 is epic token
+    expect(await contract.verifyTokenClaimInTier(2, Number(5))).to.be.equal(true);
+    expect(await contract.verifyTokenClaimInTier(2, Number(6))).to.be.equal(true);
+    expect(await contract.verifyTokenClaimInTier(2, Number(7))).to.be.equal(true);
+    expect(await contract.verifyTokenClaimInTier(2, Number(8))).to.be.equal(true);
+    expect(await contract.verifyTokenClaimInTier(2, Number(9))).to.be.equal(true);
+    
+  });
 
   // it("Supply checks (long)", async function () {
   //   // if (process.env.EXTENDED_TESTS === undefined) {

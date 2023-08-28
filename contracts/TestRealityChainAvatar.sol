@@ -2,19 +2,22 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 error ExceedeedTokenClaiming();
 error SupplyExceedeed();
 error InsufficientFunds();
 error InvalidProof();
+error CannotZeroAmount();
 error InvalidTierInput();
 error MintingClose();
-error InvalidMintAmount();
+error TokenNotExist();
 
 contract TestRealityChainAvatar is ERC721URIStorage, Ownable, ReentrancyGuard {
+    uint256 private _tokenIdCounters;
+
     struct NftAvatarSpec {
         bool isOpen;
         bytes32 merkleRoot;
@@ -32,6 +35,7 @@ contract TestRealityChainAvatar is ERC721URIStorage, Ownable, ReentrancyGuard {
 
     mapping(TierAvatar => NftAvatarSpec) public avatar;
     mapping(address => mapping(TierAvatar => uint256)) private _addressClaim;
+    mapping(TierAvatar => mapping(uint256 => bool)) private _tokenClaimAtTier;
 
     constructor(
         string memory _tokenName,
@@ -66,66 +70,72 @@ contract TestRealityChainAvatar is ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     // ===================================================================
-    //                              MODIFIER
-    // ===================================================================
-    modifier verifyWhitelist(
-        TierAvatar _tier,
-        bytes32[] calldata _merkleProof
-    ) {
-        isMintingTierOpen(_tier);
-        bytes32 _leaf = keccak256(abi.encodePacked(_msgSender()));
-        bytes32 _merkleRoot = avatar[_tier].merkleRoot;
-        if (!MerkleProof.verify(_merkleProof, _merkleRoot, _leaf)) {
-            revert InvalidProof();
-        }
-        _;
-    }
-
-    modifier mintCompliance(TierAvatar _tier, uint256 _mintAmount) {
-        if (_mintAmount < 1) {
-            revert InvalidMintAmount();
-        }
-        uint256 _addressClaimed = _addressClaim[_msgSender()][_tier];
-        uint256 _maxAmountPerAddress = avatar[_tier].maxAmountPerAddress;
-        if (_addressClaimed + _mintAmount > _maxAmountPerAddress) {
-            revert ExceedeedTokenClaiming();
-        }
-        uint256 _costTier = avatar[_tier].cost;
-        if (msg.value < _mintAmount * _costTier) {
-            revert InsufficientFunds();
-        }
-        uint256 _alreadyMinted = avatar[_tier].minted;
-        uint256 _supplyPhase = avatar[_tier].supply;
-        if (_alreadyMinted > _supplyPhase) {
-            revert SupplyExceedeed();
-        }
-        _addressClaim[_msgSender()][_tier] += _mintAmount;
-        avatar[_tier].minted += _mintAmount;
-        _;
-    }
-
-    // ===================================================================
     //                           PRIVATE FUNCTION
     // ===================================================================
-    function totalMinted() private view returns (uint256) {
-        uint256 _legendaryMinted = avatar[TierAvatar.legendary].minted;
-        uint256 _epicMinted = avatar[TierAvatar.epic].minted;
-        uint256 _rareMinted = avatar[TierAvatar.rare].minted;
-        return (_legendaryMinted + _epicMinted + _rareMinted) - 3;
+
+    function verifyWhitelist(
+        TierAvatar _tier,
+        bytes32[] calldata _merkleProof
+    ) private view {
+        checkEnumWhitelistTierOnly(_tier);
+        bytes32 _leaf = keccak256(abi.encodePacked(_msgSender()));
+        if (
+            !MerkleProof.verify(_merkleProof, avatar[_tier].merkleRoot, _leaf)
+        ) {
+            revert InvalidProof();
+        }
     }
 
-    function isMintingTierOpen(TierAvatar _tier) private view {
+    function checkEnumWhitelistTierOnly(TierAvatar _tier) private pure {
+        if (_tier == TierAvatar.rare) {
+            revert InvalidTierInput();
+        }
+    }
+
+    function isMintOpen(TierAvatar _tier) private view {
         if (!avatar[_tier].isOpen) {
             revert MintingClose();
         }
     }
 
-    function mint(
-        TierAvatar tier,
-        uint256 mintAmount
-    ) private mintCompliance(tier, mintAmount) {
-        uint256 _tokenId = totalMinted();
-        _safeMint(_msgSender(), _tokenId);
+    function _mintWrap(TierAvatar _tier, uint256 _mintAmount) private {
+        isMintOpen(_tier);
+        if (_mintAmount < 1) {
+            revert CannotZeroAmount();
+        }
+        uint256 _totalAddressClaim = _addressClaim[_msgSender()][_tier] +
+            _mintAmount;
+        if (_totalAddressClaim > avatar[_tier].maxAmountPerAddress) {
+            revert ExceedeedTokenClaiming();
+        }
+        uint256 _totalCost = _mintAmount * avatar[_tier].cost;
+        if (msg.value < _totalCost) {
+            revert InsufficientFunds();
+        }
+        uint256 _totalMinted = (avatar[_tier].minted - 1) + _mintAmount;
+        if (_totalMinted > avatar[_tier].supply) {
+            revert SupplyExceedeed();
+        }
+        _addressClaim[_msgSender()][_tier] += _mintAmount;
+        avatar[_tier].minted += _mintAmount;
+        for (uint256 i = 0; i < _mintAmount; ) {
+            _tokenIdCounters++;
+            uint256 _tokenId = _tokenIdCounters;
+            _mint(_msgSender(), _tokenId);
+            _tokenClaimAtTier[_tier][_tokenId] = true;
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    // ===================================================================
+    //                              MODIFIER
+    // ===================================================================
+    modifier whitelist(TierAvatar _tier, bytes32[] calldata _merkleProof) {
+        isMintOpen(_tier);
+        verifyWhitelist(_tier, _merkleProof);
+        _;
     }
 
     // ===================================================================
@@ -134,37 +144,38 @@ contract TestRealityChainAvatar is ERC721URIStorage, Ownable, ReentrancyGuard {
     function mintLegendary(
         uint256 mintAmount,
         bytes32[] calldata merkleProof
-    ) external payable verifyWhitelist(TierAvatar.legendary, merkleProof) {
-        mint(TierAvatar.legendary, mintAmount);
+    ) external payable whitelist(TierAvatar.legendary, merkleProof) {
+        _mintWrap(TierAvatar.legendary, mintAmount);
     }
 
     function mintEpic(
         uint256 mintAmount,
         bytes32[] calldata merkleProof
-    ) external payable verifyWhitelist(TierAvatar.epic, merkleProof) {
-        mint(TierAvatar.epic, mintAmount);
+    ) external payable whitelist(TierAvatar.epic, merkleProof) {
+        _mintWrap(TierAvatar.epic, mintAmount);
     }
 
     function mintRare(uint256 mintAmount) external payable {
-        isMintingTierOpen(TierAvatar.rare);
-        mint(TierAvatar.epic, mintAmount);
+        _mintWrap(TierAvatar.rare, mintAmount);
     }
 
     // ===================================================================
     //                          OWNER FUNCTION
     // ===================================================================
+    function setTokenUri(uint256 tokenId, string memory tokenUri) external onlyOwner {
+        _setTokenURI(tokenId, tokenUri);
+    }
+
+    function toggleMint(TierAvatar tier, bool toggle) external onlyOwner {
+        avatar[tier].isOpen = toggle;
+    }
+
     function setMerkleRoot(
         TierAvatar tier,
         bytes32 merkleRoot
     ) external onlyOwner {
-        if (tier == TierAvatar.rare) {
-            revert InvalidTierInput();
-        }
+        checkEnumWhitelistTierOnly(tier);
         avatar[tier].merkleRoot = merkleRoot;
-    }
-
-    function toggleMintTier(TierAvatar tier, bool toggle) external {
-        avatar[tier].isOpen = toggle;
     }
 
     function withdraw() external onlyOwner nonReentrant {
@@ -184,13 +195,20 @@ contract TestRealityChainAvatar is ERC721URIStorage, Ownable, ReentrancyGuard {
     //                          FRONTEND FUNCTION
     // ===================================================================
     function getAddressAlreadyClaimed(
-        address logHolder,
-        TierAvatar tier
-    ) external view returns (uint256) {
+        TierAvatar tier,
+        address logHolder
+    ) public view returns (uint256) {
         return _addressClaim[logHolder][tier];
     }
 
-    function totalSupply() public view returns (uint256) {
-        return totalMinted();
+    function totalSupply() external view returns (uint256) {
+        return _tokenIdCounters;
+    }
+
+    function verifyTokenClaimInTier(TierAvatar tier, uint256 tokenId) public view returns (bool) {
+        if (!_exists(tokenId)) {
+            revert TokenNotExist();
+        }
+        return _tokenClaimAtTier[tier][tokenId];
     }
 }

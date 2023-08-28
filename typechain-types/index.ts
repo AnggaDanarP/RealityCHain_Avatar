@@ -5,6 +5,8 @@ import type * as openzeppelin from "./@openzeppelin";
 export type { openzeppelin };
 import type * as contracts from "./contracts";
 export type { contracts };
+import type * as erc721A from "./erc721a";
+export type { erc721A };
 export * as factories from "./factories";
 export type { Ownable } from "./@openzeppelin/contracts/access/Ownable";
 export { Ownable__factory } from "./factories/@openzeppelin/contracts/access/Ownable__factory";
@@ -26,3 +28,9 @@ export type { IERC165 } from "./@openzeppelin/contracts/utils/introspection/IERC
 export { IERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/IERC165__factory";
 export type { TestRealityChainAvatar } from "./contracts/TestRealityChainAvatar";
 export { TestRealityChainAvatar__factory } from "./factories/contracts/TestRealityChainAvatar__factory";
+export type { ERC721A__IERC721Receiver } from "./erc721a/contracts/ERC721A.sol/ERC721A__IERC721Receiver";
+export { ERC721A__IERC721Receiver__factory } from "./factories/erc721a/contracts/ERC721A.sol/ERC721A__IERC721Receiver__factory";
+export type { ERC721A } from "./erc721a/contracts/ERC721A.sol/ERC721A";
+export { ERC721A__factory } from "./factories/erc721a/contracts/ERC721A.sol/ERC721A__factory";
+export type { IERC721A } from "./erc721a/contracts/IERC721A";
+export { IERC721A__factory } from "./factories/erc721a/contracts/IERC721A__factory";

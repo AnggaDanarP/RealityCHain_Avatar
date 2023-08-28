@@ -52,6 +52,18 @@ declare module "hardhat/types/runtime" {
       name: "TestRealityChainAvatar",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TestRealityChainAvatar__factory>;
+    getContractFactory(
+      name: "ERC721A__IERC721Receiver",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721A__IERC721Receiver__factory>;
+    getContractFactory(
+      name: "ERC721A",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721A__factory>;
+    getContractFactory(
+      name: "IERC721A",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC721A__factory>;
 
     getContractAt(
       name: "Ownable",
@@ -103,6 +115,21 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.TestRealityChainAvatar>;
+    getContractAt(
+      name: "ERC721A__IERC721Receiver",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC721A__IERC721Receiver>;
+    getContractAt(
+      name: "ERC721A",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC721A>;
+    getContractAt(
+      name: "IERC721A",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC721A>;
 
     deployContract(
       name: "Ownable",
@@ -144,6 +171,18 @@ declare module "hardhat/types/runtime" {
       name: "TestRealityChainAvatar",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TestRealityChainAvatar>;
+    deployContract(
+      name: "ERC721A__IERC721Receiver",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721A__IERC721Receiver>;
+    deployContract(
+      name: "ERC721A",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721A>;
+    deployContract(
+      name: "IERC721A",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC721A>;
 
     deployContract(
       name: "Ownable",
@@ -195,6 +234,21 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TestRealityChainAvatar>;
+    deployContract(
+      name: "ERC721A__IERC721Receiver",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721A__IERC721Receiver>;
+    deployContract(
+      name: "ERC721A",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721A>;
+    deployContract(
+      name: "IERC721A",
+      args: any[],
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC721A>;
 
     // default types
     getContractFactory(
