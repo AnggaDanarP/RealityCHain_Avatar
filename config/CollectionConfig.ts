@@ -12,7 +12,7 @@ const CollectionConfig: CollectionConfigInterface = {
     tokenName: "Test Reality Chain Avatar",
     tokenSymbol: "TRCA",
     hiddenMetadata: "",
-    contractAddress: "0xab4916D780588A2f04cBecb324D32d8c33CcC8f0",
+    contractAddress: "0x23331Bdb6A8aB6B5A617032B81786DFB8aD410D7",
     marketplaceIdentifier: "League-of-Guardians-Universe",
     marketplaceConfig: Marketpalce.openSea,
     legendaryAddress,

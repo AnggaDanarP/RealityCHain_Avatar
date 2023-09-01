@@ -22,6 +22,7 @@ contract TestRealityChainAvatar is ERC721Enumerable, Ownable, ReentrancyGuard {
         _hiddenMetadata = hiddenMetadata_;
         avatar[InterfaceAvatar.TierAvatar.legendary] = InterfaceAvatar
             .NftAvatarSpec({
+                isOpen: false,
                 merkleRoot: 0x00,
                 supply: 55,
                 maxTokenId: 55,
@@ -33,6 +34,7 @@ contract TestRealityChainAvatar is ERC721Enumerable, Ownable, ReentrancyGuard {
 
         avatar[InterfaceAvatar.TierAvatar.epic] = InterfaceAvatar
             .NftAvatarSpec({
+                isOpen: false,
                 merkleRoot: 0x00,
                 supply: 945,
                 maxTokenId: 1000,
@@ -44,6 +46,7 @@ contract TestRealityChainAvatar is ERC721Enumerable, Ownable, ReentrancyGuard {
 
         avatar[InterfaceAvatar.TierAvatar.rare] = InterfaceAvatar
             .NftAvatarSpec({
+                isOpen: false,
                 merkleRoot: 0x00,
                 supply: 2000,
                 maxTokenId: 3000,
@@ -58,11 +61,11 @@ contract TestRealityChainAvatar is ERC721Enumerable, Ownable, ReentrancyGuard {
     //                           PRIVATE FUNCTION
     // ===================================================================
 
-    function verifyWhitelist(
+    function _verifyWhitelist(
         InterfaceAvatar.TierAvatar _tier,
         bytes32[] calldata _merkleProof
     ) private view {
-        checkEnumWhitelistTierOnly(_tier);
+        _checkEnumWhitelistTierOnly(_tier);
         bytes32 _leaf = keccak256(abi.encodePacked(_msgSender()));
         if (
             !MerkleProof.verify(_merkleProof, avatar[_tier].merkleRoot, _leaf)
@@ -71,11 +74,17 @@ contract TestRealityChainAvatar is ERC721Enumerable, Ownable, ReentrancyGuard {
         }
     }
 
-    function checkEnumWhitelistTierOnly(
+    function _checkEnumWhitelistTierOnly(
         InterfaceAvatar.TierAvatar _tier
     ) private pure {
         if (_tier == InterfaceAvatar.TierAvatar.rare) {
             revert InterfaceAvatar.InvalidTierInput();
+        }
+    }
+
+    function _isMintOpen(InterfaceAvatar.TierAvatar _tier) private view {
+        if (!avatar[_tier].isOpen) {
+            revert InterfaceAvatar.MintingClose();
         }
     }
 
@@ -113,17 +122,6 @@ contract TestRealityChainAvatar is ERC721Enumerable, Ownable, ReentrancyGuard {
     }
 
     // ===================================================================
-    //                              MODIFIER
-    // ===================================================================
-    modifier whitelist(
-        InterfaceAvatar.TierAvatar _tier,
-        bytes32[] calldata _merkleProof
-    ) {
-        verifyWhitelist(_tier, _merkleProof);
-        _;
-    }
-
-    // ===================================================================
     //                                MINT
     // ===================================================================
     function mintLegendary(
@@ -132,30 +130,38 @@ contract TestRealityChainAvatar is ERC721Enumerable, Ownable, ReentrancyGuard {
     )
         external
         payable
-        whitelist(InterfaceAvatar.TierAvatar.legendary, merkleProof)
     {
+        _isMintOpen(InterfaceAvatar.TierAvatar.legendary);
+        _verifyWhitelist(InterfaceAvatar.TierAvatar.legendary, merkleProof);
         _mintWrap(InterfaceAvatar.TierAvatar.legendary, mintAmount);
     }
 
     function mintEpic(
         uint256 mintAmount,
         bytes32[] calldata merkleProof
-    ) external payable whitelist(InterfaceAvatar.TierAvatar.epic, merkleProof) {
+    ) external payable {
+        _isMintOpen(InterfaceAvatar.TierAvatar.epic);
+        _verifyWhitelist(InterfaceAvatar.TierAvatar.epic, merkleProof);
         _mintWrap(InterfaceAvatar.TierAvatar.epic, mintAmount);
     }
 
     function mintRare(uint256 mintAmount) external payable {
+        _isMintOpen(InterfaceAvatar.TierAvatar.rare);
         _mintWrap(InterfaceAvatar.TierAvatar.rare, mintAmount);
     }
 
     // ===================================================================
     //                          OWNER FUNCTION
     // ===================================================================
+    function toggleMint(InterfaceAvatar.TierAvatar tier, bool toggle) external onlyOwner {
+        avatar[tier].isOpen = toggle;
+    }
+
     function setMerkleRoot(
         InterfaceAvatar.TierAvatar tier,
         bytes32 merkleRoot
     ) external onlyOwner {
-        checkEnumWhitelistTierOnly(tier);
+        _checkEnumWhitelistTierOnly(tier);
         avatar[tier].merkleRoot = merkleRoot;
     }
 
@@ -163,8 +169,12 @@ contract TestRealityChainAvatar is ERC721Enumerable, Ownable, ReentrancyGuard {
         _hiddenMetadata = uri;
     }
 
-    function reveal(bool toggle) external onlyOwner {
+    function setReveal(bool toggle) external onlyOwner {
         _revealed = toggle;
+    }
+
+    function setBaseUri(string memory uri) external onlyOwner {
+        _baseUri = uri;
     }
 
     function withdraw() external onlyOwner nonReentrant {

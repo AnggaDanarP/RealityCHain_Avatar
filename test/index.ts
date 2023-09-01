@@ -37,29 +37,32 @@ describe(CollectionConfig.contractName, async function () {
   });
 
   it("Check initial data", async function () {
-    expect(await contract.name()).to.equal("Test Reality Chain Avatar");
-    expect(await contract.symbol()).to.equal("TRCA");
+    expect(await contract.name()).to.equal("Test Avatar NFT");
+    expect(await contract.symbol()).to.equal("TAN");
 
     // Legendary avatar spesification
-    expect((await contract.avatar(0)).supply).to.equal(50);
+    expect((await contract.avatar(0)).supply).to.equal(55);
     expect((await contract.avatar(0)).maxAmountPerAddress).to.equal(1);
     expect((await contract.avatar(0)).cost).to.equal(utils.parseEther("0.05"));
-    expect((await contract.avatar(0)).minted).to.equal(1);
-    expect((await contract.avatar(0)).isOpen).to.equal(false);
+    expect((await contract.avatar(0)).maxTokenId).to.equal(55);
+    expect((await contract.avatar(0)).startTokenId).to.equal(1);
+    expect((await contract.avatar(0)).tokenIdCounter).to.equal(0);
 
     // Epic avatar spesification
-    expect((await contract.avatar(1)).supply).to.equal(950);
+    expect((await contract.avatar(1)).supply).to.equal(945);
     expect((await contract.avatar(1)).maxAmountPerAddress).to.equal(3);
     expect((await contract.avatar(1)).cost).to.equal(utils.parseEther("0.03"));
-    expect((await contract.avatar(1)).minted).to.equal(1);
-    expect((await contract.avatar(1)).isOpen).to.equal(false);
+    expect((await contract.avatar(1)).maxTokenId).to.equal(1000);
+    expect((await contract.avatar(1)).startTokenId).to.equal(56);
+    expect((await contract.avatar(1)).tokenIdCounter).to.equal(0);
 
     // Rare avatar spesification
     expect((await contract.avatar(2)).supply).to.equal(2000);
     expect((await contract.avatar(2)).maxAmountPerAddress).to.equal(5);
     expect((await contract.avatar(2)).cost).to.equal(utils.parseEther("0.01"));
-    expect((await contract.avatar(2)).minted).to.equal(1);
-    expect((await contract.avatar(2)).isOpen).to.equal(false);
+    expect((await contract.avatar(2)).maxTokenId).to.equal(3000);
+    expect((await contract.avatar(2)).startTokenId).to.equal(1001);
+    expect((await contract.avatar(2)).tokenIdCounter).to.equal(0);
 
     expect(await contract.totalSupply()).to.equal(0);
     expect(await contract.balanceOf(await owner.getAddress())).to.equal(0);
@@ -70,7 +73,7 @@ describe(CollectionConfig.contractName, async function () {
 
     // keep tracking that there is no token ID = 0
     await expect(contract.tokenURI(0)).to.be.revertedWith(
-      "ERC721: invalid token ID"
+      "TokenNotExist"
     );
   });
 
@@ -96,20 +99,28 @@ describe(CollectionConfig.contractName, async function () {
 
   it("Owner only functions", async function () {
     await expect(
-      contract.connect(otherHolder).setMerkleRoot(0, 0x00)
-    ).to.be.revertedWith("");
-
-    await expect(contract.connect(otherHolder).withdraw()).to.be.revertedWith(
-      "Ownable: caller is not the owner"
-    );
-
-    await expect(
       contract.connect(otherHolder).toggleMint(0, true)
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(
-      contract.connect(otherHolder).setTokenUri(1, "")
+      contract.connect(otherHolder).setMerkleRoot(0, 0x00)
+    ).to.be.revertedWith("");
+
+    await expect(
+      contract.connect(otherHolder).setHiddenMetadata("")
     ).to.be.revertedWith("Ownable: caller is not the owner");
+
+    await expect(
+      contract.connect(otherHolder).setReveal(true)
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+
+    await expect(
+      contract.connect(otherHolder).setBaseUri("")
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+
+    await expect(contract.connect(otherHolder).withdraw()).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );
   });
 
   it("Legendary Mint", async function () {
@@ -217,16 +228,24 @@ describe(CollectionConfig.contractName, async function () {
     ).to.be.revertedWith("ExceedeedTokenClaiming");
 
     // check supply
-    expect((await contract.avatar(0)).minted).to.equal(2);
+    expect((await contract.avatar(0)).tokenIdCounter).to.equal(1);
     expect(await contract.totalSupply()).to.be.equal(1);
 
+    // check token
+    expect(await contract.exist(1)).to.equal(true);
+
     // check balance
+    // on legenday
     expect(
       await contract.getAddressAlreadyClaimed(0, await whitelist.getAddress())
     ).to.equal(1);
+
+    // on epic
     expect(
       await contract.getAddressAlreadyClaimed(1, await whitelist.getAddress())
     ).to.equal(0);
+
+    // on rare
     expect(
       await contract.getAddressAlreadyClaimed(2, await otherHolder.getAddress())
     ).to.equal(0);
@@ -333,8 +352,16 @@ describe(CollectionConfig.contractName, async function () {
       );
 
     // check supply
-    expect((await contract.avatar(1)).minted).to.equal(4);
+    expect((await contract.avatar(1)).tokenIdCounter).to.equal(3);
     expect(await contract.totalSupply()).to.be.equal(4);
+
+    // check token
+    // make sure not increment in legendary token zone
+    expect(await contract.exist(2)).to.equal(false);
+
+    expect(await contract.exist(56)).to.equal(true);
+    expect(await contract.exist(57)).to.equal(true);
+    expect(await contract.exist(58)).to.equal(true);
 
     // check balance
     expect(
@@ -389,8 +416,29 @@ describe(CollectionConfig.contractName, async function () {
       .mintRare(2, { value: getPrice("0.01", 2) });
 
     // check supply
-    expect((await contract.avatar(2)).minted).to.equal(6);
+    expect((await contract.avatar(2)).tokenIdCounter).to.equal(5);
     expect(await contract.totalSupply()).to.be.equal(9);
+
+    // check token
+    // make sure not increment in legendary token zone
+    expect(await contract.exist(2)).to.equal(false);
+    expect(await contract.exist(3)).to.equal(false);
+    expect(await contract.exist(4)).to.equal(false);
+    expect(await contract.exist(5)).to.equal(false);
+    expect(await contract.exist(6)).to.equal(false);
+
+    // make sure not increment in epic token zone
+    expect(await contract.exist(59)).to.equal(false);
+    expect(await contract.exist(60)).to.equal(false);
+    expect(await contract.exist(61)).to.equal(false);
+    expect(await contract.exist(62)).to.equal(false);
+    expect(await contract.exist(63)).to.equal(false);
+
+    expect(await contract.exist(1001)).to.equal(true);
+    expect(await contract.exist(1002)).to.equal(true);
+    expect(await contract.exist(1003)).to.equal(true);
+    expect(await contract.exist(1004)).to.equal(true);
+    expect(await contract.exist(1005)).to.equal(true);
 
     // check balance
     expect(
@@ -414,29 +462,54 @@ describe(CollectionConfig.contractName, async function () {
 
   it("Token URI generation", async function () {
     // assume the metadata is located in CID bellow
-    const uriPrefix = "ipfs://QmPheZWCLHygMQLQiRVmAWD4YZBcgLndC1V3ZGVW8AECkW/";
+    const genesis = CollectionConfig.hiddenMetadata;
+    const uriPrefix = "ipfs://QmPm4WoDKMTzBGrJJifoCSX4DKb4xdnBzrHBmZ1xDwqwDs/";
     const uriSuffix = ".json";
-    const tokenAlreadyMinted = await contract.totalSupply();
+    // const tokenAlreadyMinted = await contract.totalSupply();
 
-    // Testing first and last minted tokens
-    for (let i = 1; i <= tokenAlreadyMinted; i++) {
-      expect(await contract.tokenURI(i)).to.equal("");
-    }
+    expect(await contract.tokenURI(1)).to.equal(genesis);
+    expect(await contract.tokenURI(56)).to.equal(genesis);
+    expect(await contract.tokenURI(57)).to.equal(genesis);
+    expect(await contract.tokenURI(58)).to.equal(genesis);
+    expect(await contract.tokenURI(1001)).to.equal(genesis);
+    expect(await contract.tokenURI(1002)).to.equal(genesis);
+    expect(await contract.tokenURI(1003)).to.equal(genesis);
+    expect(await contract.tokenURI(1004)).to.equal(genesis);
+    expect(await contract.tokenURI(1005)).to.equal(genesis);
 
-    // set metadata but we set it every token
-    for (let i = 1; i <= tokenAlreadyMinted; i++) {
-      await contract.setTokenUri(i, `${uriPrefix}${i}${uriSuffix}`);
-    }
+    // Reveal collection
+    await contract.setBaseUri(uriPrefix);
+    await contract.setReveal(true);
 
-    for (let i = 1; i <= tokenAlreadyMinted; i++) {
-      expect(await contract.tokenURI(i)).to.equal(
-        `${uriPrefix}${i}${uriSuffix}`
-      );
-    }
+    expect(await contract.tokenURI(1)).to.equal(`${uriPrefix}${1}${uriSuffix}`);
+    expect(await contract.tokenURI(56)).to.equal(
+      `${uriPrefix}${56}${uriSuffix}`
+    );
+    expect(await contract.tokenURI(57)).to.equal(
+      `${uriPrefix}${57}${uriSuffix}`
+    );
+    expect(await contract.tokenURI(58)).to.equal(
+      `${uriPrefix}${58}${uriSuffix}`
+    );
+    expect(await contract.tokenURI(1001)).to.equal(
+      `${uriPrefix}${1001}${uriSuffix}`
+    );
+    expect(await contract.tokenURI(1002)).to.equal(
+      `${uriPrefix}${1002}${uriSuffix}`
+    );
+    expect(await contract.tokenURI(1003)).to.equal(
+      `${uriPrefix}${1003}${uriSuffix}`
+    );
+    expect(await contract.tokenURI(1004)).to.equal(
+      `${uriPrefix}${1004}${uriSuffix}`
+    );
+    expect(await contract.tokenURI(1005)).to.equal(
+      `${uriPrefix}${1005}${uriSuffix}`
+    );
 
     // keep tracking that there is no token ID = 0
     await expect(contract.tokenURI(0)).to.be.revertedWith(
-      "ERC721: invalid token ID"
+      "TokenNotExist"
     );
   });
 
@@ -505,22 +578,19 @@ describe(CollectionConfig.contractName, async function () {
   //     );
   // });
 
-  it('Check token id that mint in correct tier', async function () {
+  it("Check token id that mint in correct tier", async function () {
     // verifu that token id 1 is legendary token
-    expect(await contract.verifyTokenClaimInTier(0, Number(1))).to.be.equal(true);
-
-    // verifu that token id 2, 3, 4 is epic token
-    expect(await contract.verifyTokenClaimInTier(1, Number(2))).to.be.equal(true);
-    expect(await contract.verifyTokenClaimInTier(1, Number(3))).to.be.equal(true);
-    expect(await contract.verifyTokenClaimInTier(1, Number(4))).to.be.equal(true);
-
-    // verifu that token id 5, 6, 7, 8, 9 is epic token
-    expect(await contract.verifyTokenClaimInTier(2, Number(5))).to.be.equal(true);
-    expect(await contract.verifyTokenClaimInTier(2, Number(6))).to.be.equal(true);
-    expect(await contract.verifyTokenClaimInTier(2, Number(7))).to.be.equal(true);
-    expect(await contract.verifyTokenClaimInTier(2, Number(8))).to.be.equal(true);
-    expect(await contract.verifyTokenClaimInTier(2, Number(9))).to.be.equal(true);
-    
+    // expect(await contract.verifyTokenClaimInTier(0, Number(1))).to.be.equal(true);
+    // // verifu that token id 2, 3, 4 is epic token
+    // expect(await contract.verifyTokenClaimInTier(1, Number(2))).to.be.equal(true);
+    // expect(await contract.verifyTokenClaimInTier(1, Number(3))).to.be.equal(true);
+    // expect(await contract.verifyTokenClaimInTier(1, Number(4))).to.be.equal(true);
+    // // verifu that token id 5, 6, 7, 8, 9 is epic token
+    // expect(await contract.verifyTokenClaimInTier(2, Number(5))).to.be.equal(true);
+    // expect(await contract.verifyTokenClaimInTier(2, Number(6))).to.be.equal(true);
+    // expect(await contract.verifyTokenClaimInTier(2, Number(7))).to.be.equal(true);
+    // expect(await contract.verifyTokenClaimInTier(2, Number(8))).to.be.equal(true);
+    // expect(await contract.verifyTokenClaimInTier(2, Number(9))).to.be.equal(true);
   });
 
   // it("Supply checks (long)", async function () {

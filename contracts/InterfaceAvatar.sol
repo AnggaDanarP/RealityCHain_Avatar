@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 interface InterfaceAvatar {
     struct NftAvatarSpec {
+        bool isOpen;
         bytes32 merkleRoot;
         uint256 supply;
         uint256 maxTokenId;
