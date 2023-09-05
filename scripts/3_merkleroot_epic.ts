@@ -16,13 +16,13 @@ async function main() {
     const contract = await NftContractProvider.getContract();
 
     // Enable whitelist sale (if needed)
-    // if (!(await contract.feature(1)).isOpen) {
+    if ((await contract.avatar(1)).merkleRoot != rootHash) {
         console.log('Set new merkleRoot...');
 
-        await contract.setMerkleRoot(1, rootHash);
-    // }
+        await contract.setMerkleRoot(0, rootHash);
+    }
 
-    console.log("Free mint has been enabled!");
+    console.log("Merkleroot already set");
 }
 
 main().catch((error) => {

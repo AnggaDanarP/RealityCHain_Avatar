@@ -13,6 +13,7 @@ const CollectionConfig: CollectionConfigInterface = {
     tokenSymbol: "TRCA",
     hiddenMetadata: "",
     contractAddress: "0x23331Bdb6A8aB6B5A617032B81786DFB8aD410D7",
+    contractAirdrop: "",
     marketplaceIdentifier: "League-of-Guardians-Universe",
     marketplaceConfig: Marketpalce.openSea,
     legendaryAddress,

@@ -11,6 +11,6 @@
       "ES5", "ES6", "dom", "dom.iterable"
     ]
   },
-  "include": ["./scripts", "./test", "./typechain"],
+  "include": ["./scripts", "./test", "./typechain", "./lib"],
   "files": ["./hardhat.config.ts"]
 }
