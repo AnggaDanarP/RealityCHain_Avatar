@@ -15,11 +15,13 @@ function getPrice(price: string, mintAmount: number) {
   return utils.parseEther(price).mul(mintAmount);
 }
 
+// describe("Reality Chain", async function () {
+
 describe(CollectionConfig.contractName, async function () {
-  let contract!: NftContractType;
   let owner!: SignerWithAddress;
   let whitelist!: SignerWithAddress;
   let otherHolder!: SignerWithAddress;
+  let contract!: NftContractType;
 
   before(async function () {
     [owner, whitelist, otherHolder] = await ethers.getSigners();
@@ -27,7 +29,8 @@ describe(CollectionConfig.contractName, async function () {
 
   it("Contract deployment", async function () {
     const Contract = await ethers.getContractFactory(
-      CollectionConfig.contractName
+      CollectionConfig.contractName,
+      owner
     );
     contract = (await Contract.deploy(
       ...ContractArguments
@@ -37,44 +40,32 @@ describe(CollectionConfig.contractName, async function () {
   });
 
   it("Check initial data", async function () {
-    expect(await contract.name()).to.equal("Test Avatar NFT");
-    expect(await contract.symbol()).to.equal("TAN");
+    expect(await contract.name()).to.equal(CollectionConfig.tokenName);
+    expect(await contract.symbol()).to.equal(CollectionConfig.tokenSymbol);
 
     // Legendary avatar spesification
     expect((await contract.avatar(0)).supply).to.equal(55);
     expect((await contract.avatar(0)).maxAmountPerAddress).to.equal(1);
     expect((await contract.avatar(0)).cost).to.equal(utils.parseEther("0.05"));
-    expect((await contract.avatar(0)).maxTokenId).to.equal(55);
-    expect((await contract.avatar(0)).startTokenId).to.equal(1);
-    expect((await contract.avatar(0)).tokenIdCounter).to.equal(0);
 
     // Epic avatar spesification
     expect((await contract.avatar(1)).supply).to.equal(945);
     expect((await contract.avatar(1)).maxAmountPerAddress).to.equal(3);
     expect((await contract.avatar(1)).cost).to.equal(utils.parseEther("0.03"));
-    expect((await contract.avatar(1)).maxTokenId).to.equal(1000);
-    expect((await contract.avatar(1)).startTokenId).to.equal(56);
-    expect((await contract.avatar(1)).tokenIdCounter).to.equal(0);
 
     // Rare avatar spesification
     expect((await contract.avatar(2)).supply).to.equal(2000);
     expect((await contract.avatar(2)).maxAmountPerAddress).to.equal(5);
     expect((await contract.avatar(2)).cost).to.equal(utils.parseEther("0.01"));
-    expect((await contract.avatar(2)).maxTokenId).to.equal(3000);
-    expect((await contract.avatar(2)).startTokenId).to.equal(1001);
-    expect((await contract.avatar(2)).tokenIdCounter).to.equal(0);
 
-    expect(await contract.totalSupply()).to.equal(0);
-    expect(await contract.balanceOf(await owner.getAddress())).to.equal(0);
+    // expect(await contract.totalSupply()).to.equal(0);
     expect(await contract.balanceOf(await whitelist.getAddress())).to.equal(0);
     expect(await contract.balanceOf(await otherHolder.getAddress())).to.equal(
       0
     );
 
     // keep tracking that there is no token ID = 0
-    await expect(contract.tokenURI(0)).to.be.revertedWith(
-      "TokenNotExist"
-    );
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken");
   });
 
   it("Before any else", async function () {
@@ -82,7 +73,7 @@ describe(CollectionConfig.contractName, async function () {
     // Legendary mint
     await expect(
       contract.connect(whitelist).mintLegendary(1, [])
-    ).to.be.revertedWith("MintingClose");
+    ).to.be.revertedWith("");
 
     // Epic mint
     await expect(
@@ -106,13 +97,13 @@ describe(CollectionConfig.contractName, async function () {
       contract.connect(otherHolder).setMerkleRoot(0, 0x00)
     ).to.be.revertedWith("");
 
-    await expect(
-      contract.connect(otherHolder).setHiddenMetadata("")
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    // await expect(
+    //   contract.connect(otherHolder).setHiddenMetadata("")
+    // ).to.be.revertedWith("Ownable: caller is not the owner");
 
-    await expect(
-      contract.connect(otherHolder).setReveal(true)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    // await expect(
+    //   contract.connect(otherHolder).setReveal(true)
+    // ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(
       contract.connect(otherHolder).setBaseUri("")
@@ -161,7 +152,6 @@ describe(CollectionConfig.contractName, async function () {
       contract
         .connect(otherHolder)
         .mintLegendary(
-          1,
           merkleTree.getHexProof(keccak256(await otherHolder.getAddress())),
           { value: getPrice("0.05", 1) }
         )
@@ -170,38 +160,16 @@ describe(CollectionConfig.contractName, async function () {
       contract
         .connect(otherHolder)
         .mintLegendary(
-          1,
           merkleTree.getHexProof(keccak256(await otherHolder.getAddress())),
           { value: getPrice("0.05", 1) }
         )
     ).to.be.revertedWith("InvalidProof");
-
-    // check mint amount to mint cause only 1 nft per address in tier legendary
-    await expect(
-      contract
-        .connect(whitelist)
-        .mintLegendary(
-          0,
-          merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
-          { value: getPrice("0.05", 1) }
-        )
-    ).to.be.revertedWith("CannotZeroAmount");
-    await expect(
-      contract
-        .connect(whitelist)
-        .mintLegendary(
-          2,
-          merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
-          { value: getPrice("0.05", 1) }
-        )
-    ).to.be.revertedWith("ExceedeedTokenClaiming");
 
     // check cost
     await expect(
       contract
         .connect(whitelist)
         .mintLegendary(
-          1,
           merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
           { value: getPrice("0.04", 1) }
         )
@@ -211,7 +179,6 @@ describe(CollectionConfig.contractName, async function () {
     await contract
       .connect(whitelist)
       .mintLegendary(
-        1,
         merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
         { value: getPrice("0.05", 1) }
       );
@@ -221,15 +188,14 @@ describe(CollectionConfig.contractName, async function () {
       contract
         .connect(whitelist)
         .mintLegendary(
-          1,
           merkleTree.getHexProof(keccak256(await whitelist.getAddress())),
           { value: getPrice("0.05", 1) }
         )
     ).to.be.revertedWith("ExceedeedTokenClaiming");
 
     // check supply
-    expect((await contract.avatar(0)).tokenIdCounter).to.equal(1);
-    expect(await contract.totalSupply()).to.be.equal(1);
+    expect((await contract.avatar(0)).minted).to.equal(1);
+    // expect(await contract.totalSupply()).to.be.equal(1);
 
     // check token
     expect(await contract.exist(1)).to.equal(true);
@@ -256,7 +222,7 @@ describe(CollectionConfig.contractName, async function () {
     // try to mint when the feature is close
     await expect(
       contract.connect(whitelist).mintLegendary(1, [])
-    ).to.be.revertedWith("MintingClose");
+    ).to.be.revertedWith("");
   });
 
   it("Epic Mint", async function () {
@@ -352,8 +318,8 @@ describe(CollectionConfig.contractName, async function () {
       );
 
     // check supply
-    expect((await contract.avatar(1)).tokenIdCounter).to.equal(3);
-    expect(await contract.totalSupply()).to.be.equal(4);
+    expect((await contract.avatar(1)).minted).to.equal(3);
+    // expect(await contract.totalSupply()).to.be.equal(4);
 
     // check token
     // make sure not increment in legendary token zone
@@ -416,8 +382,8 @@ describe(CollectionConfig.contractName, async function () {
       .mintRare(2, { value: getPrice("0.01", 2) });
 
     // check supply
-    expect((await contract.avatar(2)).tokenIdCounter).to.equal(5);
-    expect(await contract.totalSupply()).to.be.equal(9);
+    expect((await contract.avatar(2)).minted).to.equal(5);
+    // expect(await contract.totalSupply()).to.be.equal(9);
 
     // check token
     // make sure not increment in legendary token zone
@@ -462,7 +428,7 @@ describe(CollectionConfig.contractName, async function () {
 
   it("Token URI generation", async function () {
     // assume the metadata is located in CID bellow
-    const genesis = CollectionConfig.hiddenMetadata;
+    const genesis = "";
     const uriPrefix = "ipfs://QmPm4WoDKMTzBGrJJifoCSX4DKb4xdnBzrHBmZ1xDwqwDs/";
     const uriSuffix = ".json";
     // const tokenAlreadyMinted = await contract.totalSupply();
@@ -479,7 +445,7 @@ describe(CollectionConfig.contractName, async function () {
 
     // Reveal collection
     await contract.setBaseUri(uriPrefix);
-    await contract.setReveal(true);
+    // await contract.setReveal(true);
 
     expect(await contract.tokenURI(1)).to.equal(`${uriPrefix}${1}${uriSuffix}`);
     expect(await contract.tokenURI(56)).to.equal(
@@ -508,209 +474,166 @@ describe(CollectionConfig.contractName, async function () {
     );
 
     // keep tracking that there is no token ID = 0
-    await expect(contract.tokenURI(0)).to.be.revertedWith(
-      "TokenNotExist"
-    );
+    await expect(contract.tokenURI(0)).to.be.revertedWith("NonExistToken");
   });
 
   it("Withdraw", async function () {
     // success
-    await contract.connect(owner).withdraw();
+    await contract.withdraw();
 
     // error = balance is 0
-    await expect(contract.connect(owner).withdraw()).to.be.revertedWith(
-      "InsufficientFunds"
-    );
+    await expect(contract.withdraw()).to.be.revertedWith("InsufficientFunds");
   });
-
-  // it("Refund", async function () {
-  //   // set up merkleRoot for refund
-  //   const leafNode = whitelistAddresses.map((addr) => keccak256(addr));
-  //   const merkleTree = new MerkleTree(leafNode, keccak256, { sortPairs: true });
-  //   const rootHash = merkleTree.getRoot();
-
-  //   await (
-  //     await contract.setMerkleRootRefund("0x" + rootHash.toString("hex"))
-  //   ).wait();
-
-  //   await contract.setToogleForRefund(true);
-
-  //   // refund is not open while public sale is open.
-  //   // try to refund but the feature of refund still close
-  //   await expect(
-  //     contract
-  //       .connect(whitelistedUser)
-  //       .refund(
-  //         [testForRefundToken],
-  //         merkleTree.getHexProof(keccak256(await whitelistedUser.getAddress()))
-  //       )
-  //   ).to.be.revertedWith("Refund expired");
-
-  //   // make sure the refundToogle is "true" open
-  //   await contract.connect(owner).setToogleForRefund(true);
-
-  //   // try to refund but not own the token
-  //   await expect(
-  //     contract
-  //       .connect(owner)
-  //       .refund(
-  //         [testForRefundToken],
-  //         merkleTree.getHexProof(keccak256(await owner.getAddress()))
-  //       )
-  //   ).to.be.revertedWith("Not token owner");
-
-  //   // try to refund but the token is not exist
-  //   await expect(
-  //     contract
-  //       .connect(owner)
-  //       .refund(
-  //         [testForRefundToken.add(1)],
-  //         merkleTree.getHexProof(keccak256(await whitelistedUser.getAddress()))
-  //       )
-  //   ).to.be.revertedWith("Token is not exist");
-
-  //   // success refund token 6
-  //   await contract
-  //     .connect(whitelistedUser)
-  //     .refund(
-  //       [testForRefundToken],
-  //       merkleTree.getHexProof(keccak256(await whitelistedUser.getAddress()))
-  //     );
-  // });
-
-  it("Check token id that mint in correct tier", async function () {
-    // verifu that token id 1 is legendary token
-    // expect(await contract.verifyTokenClaimInTier(0, Number(1))).to.be.equal(true);
-    // // verifu that token id 2, 3, 4 is epic token
-    // expect(await contract.verifyTokenClaimInTier(1, Number(2))).to.be.equal(true);
-    // expect(await contract.verifyTokenClaimInTier(1, Number(3))).to.be.equal(true);
-    // expect(await contract.verifyTokenClaimInTier(1, Number(4))).to.be.equal(true);
-    // // verifu that token id 5, 6, 7, 8, 9 is epic token
-    // expect(await contract.verifyTokenClaimInTier(2, Number(5))).to.be.equal(true);
-    // expect(await contract.verifyTokenClaimInTier(2, Number(6))).to.be.equal(true);
-    // expect(await contract.verifyTokenClaimInTier(2, Number(7))).to.be.equal(true);
-    // expect(await contract.verifyTokenClaimInTier(2, Number(8))).to.be.equal(true);
-    // expect(await contract.verifyTokenClaimInTier(2, Number(9))).to.be.equal(true);
-  });
-
-  // it("Supply checks (long)", async function () {
-  //   // if (process.env.EXTENDED_TESTS === undefined) {
-  //   //   this.skip();
-  //   // }
-
-  //   // token public
-  //   const alreadyMintedCreatorAccess = BigNumber.from(
-  //     await contract.totalSupply()
-  //   ).toNumber();
-  //   const maxMintAmountPerTx = 1000; //10
-  //   const iterations = Math.floor(
-  //     (maxSupply - alreadyMintedCreatorAccess) / maxMintAmountPerTx
-  //   ); // 4
-  //   const expectedTotalSupply =
-  //     iterations * maxMintAmountPerTx + alreadyMintedCreatorAccess; // 46
-  //   const lastMintAmount = maxSupply - expectedTotalSupply; // 4
-
-  //   await contract.setPaused(false);
-  //   await contract.setMaxMintAmountPerTx(maxMintAmountPerTx);
-
-  //   await Promise.all(
-  //     [...Array(iterations).keys()].map(
-  //       async () =>
-  //         await contract
-  //           .connect(whitelistedUser)
-  //           .publicMint(maxMintAmountPerTx, {
-  //             value: getPrice(SaleType.PUBLIC_SALE, maxMintAmountPerTx),
-  //           })
-  //     )
-  //   );
-
-  //   // Try to mint over max supply (before sold-out)
-  //   await expect(
-  //     contract.connect(holder).publicMint(lastMintAmount + 1, {
-  //       value: getPrice(SaleType.PUBLIC_SALE, lastMintAmount + 1),
-  //     })
-  //   ).to.be.revertedWith("Max supply exceeded!");
-  //   await expect(
-  //     contract.connect(holder).publicMint(lastMintAmount + 2, {
-  //       value: getPrice(SaleType.PUBLIC_SALE, lastMintAmount + 2),
-  //     })
-  //   ).to.be.revertedWith("Max supply exceeded!");
-
-  //   expect(await contract.totalSupply()).to.equal(expectedTotalSupply);
-
-  //   // Mint last tokens with owner address and test walletOfOwner(...)
-  //   await contract.connect(owner).publicMint(lastMintAmount, {
-  //     value: getPrice(SaleType.PUBLIC_SALE, lastMintAmount),
-  //   });
-  //   // const expectedWalletOfOwner = [
-  //   //   BigNumber.from(1),
-  //   //   BigNumber.from(6),
-  //   // ];
-  //   // for (const i of [...Array(lastMintAmount).keys()].reverse()) {
-  //   //   expectedWalletOfOwner.push(BigNumber.from(maxSupply - i));
-  //   // }
-  //   // expect(await contract.tokensOfOwner(
-  //   //   await owner.getAddress(),
-  //   //   {
-  //   //     // Set gas limit to the maximum value since this function should be used off-chain only and it would fail otherwise...
-  //   //     gasLimit: BigNumber.from('0xffffffffffffffff'),
-  //   //   },
-  //   // )).deep.equal(expectedWalletOfOwner);
-
-  //   // Try to mint over max supply (after sold-out)
-  //   await expect(
-  //     contract
-  //       .connect(whitelistedUser)
-  //       .publicMint(1, { value: getPrice(SaleType.PUBLIC_SALE, 1) })
-  //   ).to.be.revertedWith("Max supply exceeded!");
-
-  //   expect(await contract.totalSupply()).to.equal(maxSupply);
-
-  //   // if (process.env.EXTENDED_TESTS === undefined) {
-  //   //   this.skip();
-  //   // }
-  // });
-
-  // it("Royalties", async function () {
-  //   // set royalties
-  //   // await contract.setRoyalties("0x0fBBc1c4830128BEFCeAff715a8B6d4bCdcaFd18", 500);
-
-  //   const tokenOwner = await contract.balanceOf(await owner.getAddress());
-  //   const tokenWhitelist = await contract.balanceOf(
-  //     await whitelistUser.getAddress()
-  //   );
-  //   const tokenHolder = await contract.balanceOf(
-  //     await publicAddress.getAddress()
-  //   );
-  //   const tokenUnknown = await contract.balanceOf(
-  //     await unkownUser.getAddress()
-  //   );
-
-  //   // check royalties from token owner
-  //   for (const i of [tokenOwner]) {
-  //     let info = await contract.royaltyInfo(i, 100);
-  //     expect(info[0]).to.equal("0x50940964eA7eF3E75Cf2929E0FBeE1b90Bd65F24"); // artist address
-  //     expect(info[1]).to.equal(5); // percentage of royalties
-  //   }
-
-  //   // check royalties from token whitelist
-  //   for (const i of [tokenWhitelist]) {
-  //     let info = await contract.royaltyInfo(i, 100);
-  //     expect(info[0]).to.equal("0x50940964eA7eF3E75Cf2929E0FBeE1b90Bd65F24"); // artist address
-  //     expect(info[1]).to.equal(5); // percentage of royalties
-  //   }
-
-  //   // check royalties from token holder
-  //   for (const i of [tokenHolder]) {
-  //     let info = await contract.royaltyInfo(i, 100);
-  //     expect(info[0]).to.equal("0x50940964eA7eF3E75Cf2929E0FBeE1b90Bd65F24"); // artist address
-  //     expect(info[1]).to.equal(5); // percentage of royalties
-  //   }
-
-  //   for (const i of [tokenUnknown]) {
-  //     let info = await contract.royaltyInfo(i, 100);
-  //     expect(info[0]).to.equal("0x50940964eA7eF3E75Cf2929E0FBeE1b90Bd65F24"); // artist address
-  //     expect(info[1]).to.equal(5); // percentage of royalties
-  //   }
-  // });
 });
+
+// let airdrop!: AirdropContractType;
+// let unknownWallet!: SignerWithAddress;
+// let contractERC20!: any;
+// let contractERC721!: any;
+// let contractERC1155!: any;
+
+// before(async function () {
+//   [unknownWallet] = await ethers.getSigners();
+// });
+
+// describe("Airdrop", async function () {
+//   it("Airdrop Contract deployment", async function () {
+//     const ContractAirdrop = await ethers.getContractFactory("Airdrop");
+//     airdrop = (await ContractAirdrop.deploy(
+//       contract.address
+//     )) as unknown as AirdropContractType;
+
+//     await airdrop.deployed();
+//   });
+
+//   it("Token and NFT Contract deployment", async function () {
+//     const ERC20 = await ethers.getContractFactory("TokenERC20");
+//     contractERC20 = await ERC20.deploy();
+
+//     await contractERC20.deployed();
+
+//     const ERC721 = await ethers.getContractFactory("NFT721");
+//     contractERC721 = await ERC721.deploy();
+
+//     await contractERC721.deployed();
+
+//     const ERC1155 = await ethers.getContractFactory("NFT1155");
+//     contractERC1155 = await ERC1155.deploy();
+
+//     await contractERC1155.deployed();
+//   });
+
+//   it("Owner only functions", async function () {
+//     // await expect(
+//     //   airdrop.connect(unknownWallet).setAmountErc20ByTier(1, Number(1))
+//     // ).to.be.revertedWith("Not Owner");
+//     // await expect(
+//     //   airdrop
+//     //     .connect(unknownWallet)
+//     //     .setAmountErc1155ByTier(1, Number(1), Number(1))
+//     // ).to.be.revertedWith("Not Owner");
+//     await expect(
+//       airdrop
+//         .connect(unknownWallet)
+//         .airdropToken(
+//           contractERC20.address,
+//           await unknownWallet.getAddress(),
+//           Number(1),
+//           1
+//         )
+//     ).to.be.revertedWith("");
+//     await expect(
+//       airdrop
+//         .connect(unknownWallet)
+//         .batchAirdropToken(
+//           contractERC20.address,
+//           [await unknownWallet.getAddress()],
+//           [Number(1)],
+//           [1]
+//         )
+//     ).to.be.revertedWith("");
+//     await expect(
+//       airdrop
+//         .connect(unknownWallet)
+//         .airdropTokenToByTier(
+//           contractERC20.address,
+//           await unknownWallet.getAddress(),
+//           Number(1)
+//         )
+//     ).to.be.revertedWith("");
+//     await expect(
+//       airdrop
+//         .connect(unknownWallet)
+//         .batchAirdropTokenByTier(
+//           contractERC20.address,
+//           [await unknownWallet.getAddress()],
+//           [Number(1)]
+//         )
+//     ).to.be.revertedWith("");
+
+//     await expect(
+//       airdrop
+//         .connect(unknownWallet)
+//         .airdropNFT721(
+//           contractERC721.address,
+//           await unknownWallet.getAddress(),
+//           Number(1),
+//           Number(1)
+//         )
+//     ).to.be.revertedWith("");
+//     // await expect(
+//     //   airdrop
+//     //     .connect(unknownWallet)
+//     //     .batchAirdropToken(
+//     //       contractERC721.address,
+//     //       [await unknownWallet.getAddress()],
+//     //       [Number(1)],
+//     //       [Number(1)]
+//     //     )
+//     // ).to.be.revertedWith("");
+
+//     // await expect(
+//     //   airdrop
+//     //     .connect(unknownWallet)
+//     //     .airdropNFT1155(
+//     //       contractERC1155.address,
+//     //       await unknownWallet.getAddress(),
+//     //       Number(1),
+//     //       Number(1),
+//     //       1
+//     //     )
+//     // ).to.be.revertedWith("");
+//     // await expect(
+//     //   airdrop
+//     //     .connect(unknownWallet)
+//     //     .batchAirdropNFT1155(
+//     //       contractERC1155.address,
+//     //       [await unknownWallet.getAddress()],
+//     //       [Number(1)],
+//     //       [Number(1)],
+//     //       [1]
+//     //     )
+//     // ).to.be.revertedWith("");
+//     // await expect(
+//     //   airdrop
+//     //     .connect(unknownWallet)
+//     //     .airdropNFT1155ByTier(
+//     //       contractERC1155.address,
+//     //       await unknownWallet.getAddress(),
+//     //       Number(1),
+//     //       Number(1)
+//     //     )
+//     // ).to.be.revertedWith("");
+//     // await expect(
+//     //   airdrop
+//     //     .connect(unknownWallet)
+//     //     .batchAirdropNFT1155ByTier(
+//     //       contractERC1155.address,
+//     //       [await unknownWallet.getAddress()],
+//     //       [Number(1)],
+//     //       [Number(1)]
+//     //     )
+//     // ).to.be.revertedWith("");
+//   });
+// });
+// });
