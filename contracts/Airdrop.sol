@@ -4,7 +4,44 @@ pragma solidity 0.8.19;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "./InterfaceAvatar.sol";
+
+interface InterfaceAvatar {
+    struct NftAvatarSpec {
+        bool isOpen;
+        bytes32 merkleRoot;
+        uint256 supply;
+        uint256 maxTokenId;
+        uint256 startTokenId;
+        uint256 maxAmountPerAddress;
+        uint256 cost;
+        uint256 tokenIdCounter;
+    }
+
+    enum TierAvatar {
+        legendary,
+        epic,
+        rare
+    }
+
+    error ExceedeedTokenClaiming();
+    error SupplyExceedeed();
+    error InsufficientFunds();
+    error InvalidProof();
+    error CannotZeroAmount();
+    error InvalidTierInput();
+    error MintingClose();
+    error TokenNotExist();
+
+    function exist(uint256 tokenId) external view returns (bool);
+
+    function ownerOf(uint256 tokenId) external view returns (address);
+
+    function getAddressAlreadyClaimed(
+        TierAvatar tier,
+        address holder
+    ) external view returns (uint256);
+
+}
 
 error InvalidInputParam();
 error NeedApproveFromOwner();
@@ -34,6 +71,9 @@ contract Airdrop {
         _amountAirdropERC20[InterfaceAvatar.TierAvatar.rare] = 20;
     }
 
+    /**
+     * @dev a modifier to check the wallet address id an owner
+     */
     modifier onlyOwner() {
         require(msg.sender == _owner, "Not Owner");
         _;
@@ -71,6 +111,10 @@ contract Airdrop {
     // ===================================================================
     //                          PRIVATE FUNCTION
     // ===================================================================
+    /**
+     * @dev a private function to get what tier the token is from the token ID number
+     * @param tokenId is token id from the nft avatar
+     */
     function _getTokenTier(
         uint256 tokenId
     ) private pure returns (InterfaceAvatar.TierAvatar) {
@@ -112,6 +156,11 @@ contract Airdrop {
         return _nftAirdrop1155[onTier][tokenIdNft1155];
     }
 
+    /**
+     * @dev a private function for check that wallet address have NFT Avatar
+     * @param tokenIdAvatar is token id from the nft avatar
+     * @param holder is token id from the nft 1155 that want to airdrop
+     */
     function _checkOwnerOfNftAvatar(
         uint256 tokenIdAvatar,
         address holder
@@ -152,6 +201,12 @@ contract Airdrop {
         }
     }
 
+    /**
+     * @dev private airdrop function for nft ERC20 that the amount is already set by the owner
+     * @dev function will set owner to `approve` this smart contract to send the `amount` of token supply
+     * @param to is an destination address
+     * @param tokenIdAvatar is token id from wallet address nft avatar
+     */
     function _wrapAirdropERC20(
         IERC20 tokenAddress,
         address to,
@@ -187,6 +242,14 @@ contract Airdrop {
         nftAddress721.safeTransferFrom(msg.sender, to, tokenIdErc721);
     }
 
+    /**
+     * @dev private airdrop function for nft ERC1155
+     * @dev function will set owner to `approve` this smart contract to send the `token id` of nft
+     * @param to is an destination address
+     * @param tokenIdAvatar is token id from wallet address nft avatar
+     * @param tokenIdERC1155 is an token ID nft erc1155 that owner have and want to transfer
+     * @param amount is amount of nft want to sent
+     */
     function _wrapAirdropNFT1155(
         IERC1155 nftAddress1155,
         address to,
@@ -209,6 +272,13 @@ contract Airdrop {
         nftAddress1155.safeTransferFrom(_owner, to, tokenIdERC1155, amount, "");
     }
 
+    /**
+     * @dev private airdrop function for nft ERC1155 that the amount is already set by the owner
+     * @dev function will set owner to `approve` this smart contract to send the `token id` of nft
+     * @param to is an destination address
+     * @param tokenIdAvatar is token id from wallet address nft avatar
+     * @param tokenIdERC1155 is an token ID nft erc1155 that owner have and want to transfer
+     */
     function _wrapAirdropNFT1155(
         IERC1155 nftAddress1155,
         address to,
@@ -331,7 +401,7 @@ contract Airdrop {
      * @dev bulk airdrop function for token ERC721 with verification that address has nft avatar
      * @dev `to`, `tokenIdAvatar`, and `tokenIdNFT721` must have same length value
      */
-    function batchAridropNFT721(
+    function batchAirdropNFT721(
         IERC721 nftAddress721,
         address[] calldata to,
         uint256[] calldata tokenIdAvatar,
@@ -345,7 +415,7 @@ contract Airdrop {
             revert InvalidInputParam();
         }
         for (uint256 i = 0; i < _totalAddress; ) {
-            this.airdropNFT721(
+            _wrapAirdropNFT721(
                 nftAddress721,
                 to[i],
                 tokenIdAvatar[i],

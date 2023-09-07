@@ -74,6 +74,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Airdrop__factory>;
     getContractFactory(
+      name: "InterfaceAvatar",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.InterfaceAvatar__factory>;
+    getContractFactory(
       name: "AvatarNFT",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.AvatarNFT__factory>;
@@ -89,10 +93,6 @@ declare module "hardhat/types/runtime" {
       name: "TokenERC20",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TokenERC20__factory>;
-    getContractFactory(
-      name: "InterfaceAvatar",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.InterfaceAvatar__factory>;
 
     getContractAt(
       name: "Ownable",
@@ -170,6 +170,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Airdrop>;
     getContractAt(
+      name: "InterfaceAvatar",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.InterfaceAvatar>;
+    getContractAt(
       name: "AvatarNFT",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -189,11 +194,6 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.TokenERC20>;
-    getContractAt(
-      name: "InterfaceAvatar",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.InterfaceAvatar>;
 
     deployContract(
       name: "Ownable",
@@ -256,6 +256,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Airdrop>;
     deployContract(
+      name: "InterfaceAvatar",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.InterfaceAvatar>;
+    deployContract(
       name: "AvatarNFT",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.AvatarNFT>;
@@ -271,10 +275,6 @@ declare module "hardhat/types/runtime" {
       name: "TokenERC20",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TokenERC20>;
-    deployContract(
-      name: "InterfaceAvatar",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.InterfaceAvatar>;
 
     deployContract(
       name: "Ownable",
@@ -352,6 +352,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Airdrop>;
     deployContract(
+      name: "InterfaceAvatar",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.InterfaceAvatar>;
+    deployContract(
       name: "AvatarNFT",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -371,11 +376,6 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TokenERC20>;
-    deployContract(
-      name: "InterfaceAvatar",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.InterfaceAvatar>;
 
     // default types
     getContractFactory(

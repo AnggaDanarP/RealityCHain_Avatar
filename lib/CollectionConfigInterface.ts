@@ -9,6 +9,7 @@ export default interface CollectionConfigInterface {
     tokenSymbol: string;
     hiddenMetadata: string;
     contractAddress: string|null;
+    AirdropcontractAddress: string|null;
     legendaryAddress: string[];
     epicAddress: string[];
     rareAddress: string[];

@@ -34,8 +34,10 @@ export type { ERC165 } from "./@openzeppelin/contracts/utils/introspection/ERC16
 export { ERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/ERC165__factory";
 export type { IERC165 } from "./@openzeppelin/contracts/utils/introspection/IERC165";
 export { IERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/IERC165__factory";
-export type { Airdrop } from "./contracts/Airdrop";
-export { Airdrop__factory } from "./factories/contracts/Airdrop__factory";
+export type { Airdrop } from "./contracts/Airdrop.sol/Airdrop";
+export { Airdrop__factory } from "./factories/contracts/Airdrop.sol/Airdrop__factory";
+export type { InterfaceAvatar } from "./contracts/Airdrop.sol/InterfaceAvatar";
+export { InterfaceAvatar__factory } from "./factories/contracts/Airdrop.sol/InterfaceAvatar__factory";
 export type { AvatarNFT } from "./contracts/AvatarNFT";
 export { AvatarNFT__factory } from "./factories/contracts/AvatarNFT__factory";
 export type { NFT1155 } from "./contracts/contract-testing/NFT1155";
@@ -44,5 +46,3 @@ export type { NFT721 } from "./contracts/contract-testing/NFT721";
 export { NFT721__factory } from "./factories/contracts/contract-testing/NFT721__factory";
 export type { TokenERC20 } from "./contracts/contract-testing/TokenERC20";
 export { TokenERC20__factory } from "./factories/contracts/contract-testing/TokenERC20__factory";
-export type { InterfaceAvatar } from "./contracts/InterfaceAvatar";
-export { InterfaceAvatar__factory } from "./factories/contracts/InterfaceAvatar__factory";
