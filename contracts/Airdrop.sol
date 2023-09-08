@@ -260,7 +260,6 @@ contract Airdrop {
         if (!nftAddress1155.isApprovedForAll(_owner, address(this))) {
             revert NeedApproveFromOwner();
         }
-
         if (amount == 0) {
             revert InterfaceAvatar.CannotZeroAmount();
         }

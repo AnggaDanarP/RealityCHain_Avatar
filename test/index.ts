@@ -531,6 +531,8 @@ describe("Reality Chain", async function () {
     });
 
     it("Token and NFT Contract deployment", async function () {
+      [owner] = await ethers.getSigners();
+
       const ERC20 = await ethers.getContractFactory("TokenERC20");
       contractERC20 = await ERC20.deploy();
 
@@ -663,97 +665,197 @@ describe("Reality Chain", async function () {
 
     it("Smart Contract still not to being Approval", async function () {
       await expect(
-        airdrop
-          .airdropToken(
-            contractERC20.address,
-            await whitelist.getAddress(),
-            1,
-            1
-          )
+        airdrop.airdropToken(
+          contractERC20.address,
+          await whitelist.getAddress(),
+          1,
+          1
+        )
       ).to.be.revertedWith("ERC20: insufficient allowance");
       await expect(
-        airdrop
-          .batchAirdropToken(
-            contractERC20.address,
-            [await whitelist.getAddress()],
-            [1],
-            [1]
-          )
+        airdrop.batchAirdropToken(
+          contractERC20.address,
+          [await whitelist.getAddress()],
+          [1],
+          [1]
+        )
       ).to.be.revertedWith("ERC20: insufficient allowance");
       await expect(
-        airdrop
-          .airdropTokenToByTier(
-            contractERC20.address,
-            await whitelist.getAddress(),
-            1
-          )
+        airdrop.airdropTokenToByTier(
+          contractERC20.address,
+          await whitelist.getAddress(),
+          1
+        )
       ).to.be.revertedWith("ERC20: insufficient allowance");
       await expect(
-        airdrop
-          .batchAirdropTokenByTier(
-            contractERC20.address,
-            [await whitelist.getAddress()],
-            [1]
-          )
+        airdrop.batchAirdropTokenByTier(
+          contractERC20.address,
+          [await whitelist.getAddress()],
+          [1]
+        )
       ).to.be.revertedWith("ERC20: insufficient allowance");
 
       await expect(
-        airdrop
-          .airdropNFT721(
-            contractERC721.address,
-            await whitelist.getAddress(),
-            1,
-            1
-          )
+        airdrop.airdropNFT721(
+          contractERC721.address,
+          await whitelist.getAddress(),
+          1,
+          1
+        )
       ).to.be.revertedWith("NeedApproveFromOwner");
       await expect(
-        airdrop
-          .batchAirdropNFT721(
-            contractERC721.address,
-            [await whitelist.getAddress()],
-            [1],
-            [1]
-          )
+        airdrop.batchAirdropNFT721(
+          contractERC721.address,
+          [await whitelist.getAddress()],
+          [1],
+          [1]
+        )
       ).to.be.revertedWith("NeedApproveFromOwner");
 
       await expect(
-        airdrop
-          .airdropNFT1155(
-            contractERC1155.address,
-            await whitelist.getAddress(),
-            1,
-            1,
-            1
-          )
+        airdrop.airdropNFT1155(
+          contractERC1155.address,
+          await whitelist.getAddress(),
+          1,
+          1,
+          1
+        )
       ).to.be.revertedWith("NeedApproveFromOwner");
       await expect(
-        airdrop
-          .batchAirdropNFT1155(
-            contractERC1155.address,
-            [await whitelist.getAddress()],
-            [1],
-            [1],
-            [1]
-          )
+        airdrop.batchAirdropNFT1155(
+          contractERC1155.address,
+          [await whitelist.getAddress()],
+          [1],
+          [1],
+          [1]
+        )
       ).to.be.revertedWith("NeedApproveFromOwner");
       await expect(
-        airdrop
-          .airdropNFT1155ByTier(
-            contractERC1155.address,
-            await whitelist.getAddress(),
-            1,
-            1
-          )
+        airdrop.airdropNFT1155ByTier(
+          contractERC1155.address,
+          await whitelist.getAddress(),
+          1,
+          1
+        )
       ).to.be.revertedWith("NeedApproveFromOwner");
       await expect(
-        airdrop
-          .batchAirdropNFT1155ByTier(
-            contractERC1155.address,
-            [await whitelist.getAddress()],
-            [1],
-            [1]
-          )
+        airdrop.batchAirdropNFT1155ByTier(
+          contractERC1155.address,
+          [await whitelist.getAddress()],
+          [1],
+          [1]
+        )
       ).to.be.revertedWith("NeedApproveFromOwner");
+    });
+
+    it("Airdrop ERC20 Token", async function () {
+      // approve this airdrop contract to send owner token about 100 token
+      await contractERC20.approve(airdrop.address, 100);
+
+      // check allowance 100 token
+      expect(
+        await contractERC20.allowance(await owner.getAddress(), airdrop.address)
+      ).to.be.equal(100);
+
+      // error airdrop token coause the amount is 0
+      await expect(
+        airdrop.airdropToken(
+          contractERC20.address,
+          await whitelist.getAddress(),
+          1,
+          0
+        )
+      ).to.be.revertedWith("CannotZeroAmount");
+
+      // error airdrop cause not avatar wallet
+      await expect(
+        airdrop.airdropToken(
+          contractERC20.address,
+          await unknownWallet.getAddress(),
+          1,
+          1
+        )
+      ).to.be.revertedWith("TokenIsNotTheOwner");
+
+      // success airdrop 20 token
+      await airdrop.airdropToken(
+        contractERC20.address,
+        await whitelist.getAddress(),
+        1,
+        20
+      );
+      // success batch airdrop 50 token
+      await airdrop.batchAirdropToken(
+        contractERC20.address,
+        [await whitelist.getAddress(), await otherHolder.getAddress()],
+        [1, 1001],
+        [20, 30]
+      );
+
+      // error cause the token is over allowance
+      await expect(
+        airdrop.airdropToken(
+          contractERC20.address,
+          await whitelist.getAddress(),
+          1,
+          40
+        )
+      ).to.be.revertedWith("ERC20: insufficient allowance");
+
+      // check balance address
+      expect(
+        await contractERC20.balanceOf(await whitelist.getAddress())
+      ).to.be.equal(40);
+      expect(
+        await contractERC20.balanceOf(await otherHolder.getAddress())
+      ).to.be.equal(30);
+      expect(
+        await contractERC20.allowance(await owner.getAddress(), airdrop.address)
+      ).to.be.equal(30);
+
+      // increase allowance just make sure
+      await contractERC20.approve(airdrop.address, 1000);
+
+      // success airdrop token and the amount token by Tier
+      await airdrop.airdropTokenToByTier(
+        contractERC20.address,
+        await whitelist.getAddress(),
+        56 // should sent 50 tokens
+      );
+      await airdrop.batchAirdropTokenByTier(
+        contractERC20.address,
+        [
+          await whitelist.getAddress(),
+          await whitelist.getAddress(),
+          await otherHolder.getAddress(),
+        ],
+        [1, 56, 1001]
+      ); // should sent 100, 50, 20 tokens and the total 170 tokens
+
+      // error cause length of array is different
+      await expect(
+        airdrop.batchAirdropToken(
+          contractERC20.address,
+          [await whitelist.getAddress(), await whitelist.getAddress()],
+          [1],
+          [1]
+        )
+      ).to.be.revertedWith("InvalidInputParam");
+      await expect(
+        airdrop.batchAirdropTokenByTier(
+          contractERC20.address,
+          [await whitelist.getAddress(), await whitelist.getAddress()],
+          [1]
+        )
+      ).to.be.revertedWith("InvalidInputParam");
+
+      // check balance address
+      expect(
+        await contractERC20.balanceOf(await whitelist.getAddress())
+      ).to.be.equal(240);
+      expect(
+        await contractERC20.balanceOf(await otherHolder.getAddress())
+      ).to.be.equal(50);
     });
   });
 });
