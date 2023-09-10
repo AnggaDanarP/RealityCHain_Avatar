@@ -9,6 +9,7 @@ import ContractArguments from "../config/ContractArguments";
 import { NftContractType } from "../lib/NftContractProvider";
 import { AirdropContractType } from "../lib/AirdropContractProvider";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { toUtf8Bytes } from "ethers/lib/utils";
 
 chai.use(ChaiAsPromised);
 
@@ -637,7 +638,7 @@ describe("Reality Chain", async function () {
             contractERC1155.address,
             [await unknownWallet.getAddress()],
             [Number(1)],
-            [Number(1)],
+            1,
             [1]
           )
       ).to.be.revertedWith("Not Owner");
@@ -658,7 +659,7 @@ describe("Reality Chain", async function () {
             contractERC1155.address,
             [await unknownWallet.getAddress()],
             [Number(1)],
-            [Number(1)]
+            1
           )
       ).to.be.revertedWith("Not Owner");
     });
@@ -726,7 +727,7 @@ describe("Reality Chain", async function () {
           contractERC1155.address,
           [await whitelist.getAddress()],
           [1],
-          [1],
+          1,
           [1]
         )
       ).to.be.revertedWith("NeedApproveFromOwner");
@@ -743,7 +744,7 @@ describe("Reality Chain", async function () {
           contractERC1155.address,
           [await whitelist.getAddress()],
           [1],
-          [1]
+          1
         )
       ).to.be.revertedWith("NeedApproveFromOwner");
     });
@@ -856,6 +857,151 @@ describe("Reality Chain", async function () {
       expect(
         await contractERC20.balanceOf(await otherHolder.getAddress())
       ).to.be.equal(50);
+    });
+
+    it("Airdrop NFT ERC721", async function () {});
+
+    it("Airdrop NFT ERC1155", async function () {
+      // setup all the feature for erc1155 airdrop
+      // when deploy ERC1155, it is automatically mint on token ID as sword for 100 amount
+      // need to approve this airdrop contract and set the award for every tier NFT avatar
+
+      // minting token id 2 for testing (shield)
+      await contractERC1155.mint(
+        await owner.getAddress(),
+        2,
+        100,
+        toUtf8Bytes("Shield")
+      );
+
+      // set up award
+      await airdrop.setAmountErc1155ByTier(0, 1, 3); // legendary tier will get 3 NFT swords
+      await airdrop.setAmountErc1155ByTier(1, 1, 2); // legendary tier will get 2 NFT swords
+      await airdrop.setAmountErc1155ByTier(2, 1, 1); // legendary tier will get 1 NFT swords
+
+      // approve smart contract aridrop
+      await contractERC1155.setApprovalForAll(airdrop.address, true);
+
+      // check is already approve
+      expect(
+        await contractERC1155.isApprovedForAll(
+          await owner.getAddress(),
+          airdrop.address
+        )
+      ).to.be.equal(true);
+
+      // error airdrop token cause the amount is 0
+      await expect(
+        airdrop.airdropNFT1155(
+          contractERC1155.address,
+          await whitelist.getAddress(),
+          1,
+          1,
+          0
+        )
+      ).to.be.revertedWith("CannotZeroAmount");
+
+      // error airdrop cause not avatar wallet
+      await expect(
+        airdrop.airdropNFT1155(
+          contractERC1155.address,
+          await unknownWallet.getAddress(),
+          1,
+          1,
+          1
+        )
+      ).to.be.revertedWith("TokenIsNotTheOwner");
+
+      // balance owner is emty
+      await expect(
+        airdrop.airdropNFT1155(
+          contractERC1155.address,
+          await whitelist.getAddress(),
+          1,
+          3,
+          1
+        )
+      ).to.be.revertedWith("BalanceExceeded");
+
+      // success airdrop 1 NFT on shield for token ID 2
+      await airdrop.airdropNFT1155(
+        contractERC1155.address,
+        await whitelist.getAddress(),
+        1,
+        2,
+        1
+      );
+      // success airdrop on shield for token ID 2
+      await airdrop.batchAirdropNFT1155(
+        contractERC1155.address,
+        [await whitelist.getAddress(), await otherHolder.getAddress()],
+        [1, 1001],
+        2,
+        [2, 1]
+      );
+
+      // check balance address
+      expect(
+        await contractERC1155.balanceOf(await whitelist.getAddress(), 2)
+      ).to.be.equal(3);
+      expect(
+        await contractERC1155.balanceOf(await otherHolder.getAddress(), 2)
+      ).to.be.equal(1);
+
+      // success nft and the amount token by Tier
+      await airdrop.airdropNFT1155ByTier(
+        contractERC1155.address,
+        await whitelist.getAddress(),
+        56,
+        1 // should sent 2 swords
+      );
+
+      await airdrop.batchAirdropNFT1155ByTier(
+        contractERC1155.address,
+        [
+          await whitelist.getAddress(),
+          await whitelist.getAddress(),
+          await otherHolder.getAddress(),
+        ],
+        [1, 56, 1001],
+        1
+      ); // should sent 3, 2, 1 nft
+
+      // error cause length of array is different
+      await expect(
+        airdrop.batchAirdropNFT1155(
+          contractERC1155.address,
+          [await whitelist.getAddress(), await whitelist.getAddress()],
+          [1],
+          1,
+          [1]
+        )
+      ).to.be.revertedWith("InvalidInputParam");
+      await expect(
+        airdrop.batchAirdropNFT1155ByTier(
+          contractERC1155.address,
+          [await whitelist.getAddress(), await whitelist.getAddress()],
+          [1],
+          1
+        )
+      ).to.be.revertedWith("InvalidInputParam");
+
+      // check balance address
+      // token id 1 = sword
+      expect(
+        await contractERC1155.balanceOf(await whitelist.getAddress(), 1)
+      ).to.be.equal(7);
+      expect(
+        await contractERC1155.balanceOf(await otherHolder.getAddress(), 1)
+      ).to.be.equal(1);
+
+      // token id 2 = shield
+      expect(
+        await contractERC1155.balanceOf(await whitelist.getAddress(), 2)
+      ).to.be.equal(3);
+      expect(
+        await contractERC1155.balanceOf(await otherHolder.getAddress(), 2)
+      ).to.be.equal(1);
     });
   });
 });

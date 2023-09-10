@@ -45,6 +45,7 @@ interface InterfaceAvatar {
 
 error InvalidInputParam();
 error NeedApproveFromOwner();
+error BalanceExceeded();
 error ErrorApprove(uint256 amount);
 error TokenIsNotTheOwner(address to, uint256 tokenId);
 error ErrorTransferFrom(address spender, address to, uint256 amount);
@@ -264,7 +265,7 @@ contract Airdrop {
             revert InterfaceAvatar.CannotZeroAmount();
         }
         if (nftAddress1155.balanceOf(_owner, tokenIdERC1155) == 0) {
-            revert InterfaceAvatar.CannotZeroAmount();
+            revert BalanceExceeded();
         }
         _checkOwnerOfNftAvatar(tokenIdAvatar, to);
 
@@ -457,13 +458,12 @@ contract Airdrop {
         IERC1155 nftAddress1155,
         address[] calldata to,
         uint256[] calldata tokenIdAvatar,
-        uint256[] calldata tokenIdNFT1155,
+        uint256 tokenIdNFT1155,
         uint256[] calldata amount
     ) external onlyOwner() {
         uint256 _totalAddress = to.length;
         if (
             _totalAddress != tokenIdAvatar.length &&
-            _totalAddress != tokenIdNFT1155.length &&
             _totalAddress != amount.length
         ) {
             revert InvalidInputParam();
@@ -473,7 +473,7 @@ contract Airdrop {
                 nftAddress1155,
                 to[i],
                 tokenIdAvatar[i],
-                tokenIdNFT1155[i],
+                tokenIdNFT1155,
                 amount[i]
             );
             unchecked {
@@ -495,12 +495,11 @@ contract Airdrop {
         IERC1155 nftAddress1155,
         address[] calldata to,
         uint256[] calldata tokenIdAvatar,
-        uint256[] calldata tokenIdNFT1155
+        uint256 tokenIdNFT1155
     ) external onlyOwner() {
         uint256 _totalAddress = to.length;
         if (
-            _totalAddress != tokenIdAvatar.length &&
-            _totalAddress != tokenIdNFT1155.length
+            _totalAddress != tokenIdAvatar.length
         ) {
             revert InvalidInputParam();
         }
@@ -509,7 +508,7 @@ contract Airdrop {
                 nftAddress1155,
                 to[i],
                 tokenIdAvatar[i],
-                tokenIdNFT1155[i]
+                tokenIdNFT1155
             );
             unchecked {
                 ++i;

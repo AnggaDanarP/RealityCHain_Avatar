@@ -5,7 +5,9 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract NFT1155 is ERC1155, Ownable {
-    constructor() ERC1155("") {}
+    constructor() ERC1155("") {
+        _mint(msg.sender, 1, 100, "");
+    }
 
     function mint(address account, uint256 id, uint256 amount, bytes memory data)
         public
