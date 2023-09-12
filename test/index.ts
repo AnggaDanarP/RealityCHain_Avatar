@@ -523,6 +523,7 @@ describe("Reality Chain", async function () {
 
   describe("Airdrop", async function () {
     it("Airdrop Contract deployment", async function () {
+      [owner] = await ethers.getSigners();
       const ContractAirdrop = await ethers.getContractFactory("Airdrop");
       airdrop = (await ContractAirdrop.deploy(
         contract.address
@@ -859,7 +860,106 @@ describe("Reality Chain", async function () {
       ).to.be.equal(50);
     });
 
-    it("Airdrop NFT ERC721", async function () {});
+    it("Airdrop NFT ERC721", async function () {
+      // tring mint token for testing to owner
+      // so the owner can approve the smart contract for transfer nft
+      await contractERC721.connect(owner).safeMint(); // token id 1
+      await contractERC721.connect(owner).safeMint(); // token id 2
+      await contractERC721.connect(owner).safeMint(); // token id 3
+
+      // make sure token id is on owner
+      expect(await contractERC721.ownerOf(1)).to.be.equal(
+        await owner.getAddress()
+      );
+      expect(await contractERC721.ownerOf(2)).to.be.equal(
+        await owner.getAddress()
+      );
+      expect(await contractERC721.ownerOf(3)).to.be.equal(
+        await owner.getAddress()
+      );
+
+      // this section airdrop doesnt have amount nft want to airdrop because the NFT is Unique
+      // need to setApprovalForAll() for this smart contract
+      await contractERC721.setApprovalForAll(airdrop.address, true);
+
+      // error nft avatar token is not exist
+      await expect(
+        airdrop.airdropNFT721(
+          contractERC721.address,
+          await whitelist.getAddress(),
+          7,
+          1
+        )
+      ).to.be.revertedWith("ERC721: invalid token ID");
+
+      // error airdrop to not the owner of the avatar
+      await expect(
+        airdrop.airdropNFT721(
+          contractERC721.address,
+          await unknownWallet.getAddress(),
+          1,
+          1
+        )
+      ).to.be.revertedWith("TokenIsNotTheOwner");
+
+      // error coz airdrop token id 4 that wasn't mint
+      await expect(
+        airdrop.airdropNFT721(
+          contractERC721.address,
+          await whitelist.getAddress(),
+          1,
+          4
+        )
+      ).to.be.revertedWith("ERC721: invalid token ID");
+
+      // error airdrop coz different length of parameter
+      await expect(
+        airdrop.batchAirdropNFT721(
+          contractERC721.address,
+          [await whitelist.getAddress(), await otherHolder.getAddress()],
+          [1],
+          [2]
+        )
+      ).to.be.revertedWith("InvalidInputParam");
+
+      // success to airdrop token id 1
+      await airdrop.airdropNFT721(
+        contractERC721.address,
+        await whitelist.getAddress(),
+        1,
+        1
+      );
+
+      // success batch airdrop nft erc721
+      await airdrop.batchAirdropNFT721(
+        contractERC721.address,
+        [await whitelist.getAddress(), await otherHolder.getAddress()],
+        [56, 1001],
+        [2, 3]
+      );
+
+      // check balance
+      expect(
+        await contractERC721.balanceOf(await whitelist.getAddress())
+      ).to.be.equal(2);
+      expect(
+        await contractERC721.balanceOf(await otherHolder.getAddress())
+      ).to.be.equal(1);
+      expect(
+        await contractERC721.balanceOf(await owner.getAddress())
+      ).to.be.equal(0); // all the token already transfered
+
+      // check owner ship of token id
+      expect(await contractERC721.ownerOf(1)).to.be.equal(
+        await whitelist.getAddress()
+      );
+      expect(await contractERC721.ownerOf(2)).to.be.equal(
+        await whitelist.getAddress()
+      );
+      expect(await contractERC721.ownerOf(3)).to.be.equal(
+        await otherHolder.getAddress()
+      );
+    });
 
     it("Airdrop NFT ERC1155", async function () {
       // setup all the feature for erc1155 airdrop

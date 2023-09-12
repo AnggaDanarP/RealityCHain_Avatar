@@ -166,11 +166,6 @@ contract Airdrop {
         uint256 tokenIdAvatar,
         address holder
     ) private view {
-        // check the token id is exist
-        if (!_nftAvatar.exist(tokenIdAvatar)) {
-            revert InterfaceAvatar.TokenNotExist();
-        }
-
         // check the token Id is same as `to` address
         if (_nftAvatar.ownerOf(tokenIdAvatar) != holder) {
             revert TokenIsNotTheOwner(holder, tokenIdAvatar);
@@ -233,14 +228,17 @@ contract Airdrop {
         if (!nftAddress721.isApprovedForAll(_owner, address(this))) {
             revert NeedApproveFromOwner();
         }
-        // check nft to airdrop is owner of sender
-        if (nftAddress721.ownerOf(tokenIdErc721) != _owner) {
+        // check nft to airdrop is exist
+        if (nftAddress721.ownerOf(tokenIdErc721) == address(0)) {
             revert InterfaceAvatar.TokenNotExist();
+        }
+        if (nftAddress721.ownerOf(tokenIdErc721) != _owner) {
+            revert TokenIsNotTheOwner(_owner, tokenIdErc721);
         }
         _checkOwnerOfNftAvatar(tokenIdAvatar, to);
 
         // nftAddress721.approve(address(this), tokenIdErc721);
-        nftAddress721.safeTransferFrom(msg.sender, to, tokenIdErc721);
+        nftAddress721.safeTransferFrom(_owner, to, tokenIdErc721);
     }
 
     /**
@@ -414,13 +412,16 @@ contract Airdrop {
         ) {
             revert InvalidInputParam();
         }
-        for (uint256 i = 0; i < _totalAddress; ) {
+        for (uint256 i = 0; i < _totalAddress;) {
             _wrapAirdropNFT721(
                 nftAddress721,
                 to[i],
                 tokenIdAvatar[i],
                 tokenIdNFT721[i]
             );
+            unchecked {
+                ++i;
+            }
         }
     }
 
