@@ -19,9 +19,12 @@ error NonExistToken();
 contract AvatarNFT is ERC721, Ownable, ReentrancyGuard {
     using Strings for uint256;
 
-    uint256 private _counterTokenIdLegendary = 0;
-    uint256 private _counterTokenIdEpic = 55;
-    uint256 private _counterTokenIdRare = 1000;
+    uint256 private _counterTokenIdLegendary = 1;
+    uint256 private _counterTokenIdEpic = 56;
+    uint256 private _counterTokenIdRare = 1001;
+    uint256 private _mintedTokenIdLegendary;
+    uint256 private _mintedTokenIdEpic;
+    uint256 private _mintedTokenIdRare;
 
     string private _baseUriAvatar = "";
 
@@ -31,7 +34,6 @@ contract AvatarNFT is ERC721, Ownable, ReentrancyGuard {
         uint256 supply;
         uint256 maxAmountPerAddress;
         uint256 cost;
-        uint256 minted;
     }
 
     enum TierAvatar {
@@ -52,8 +54,7 @@ contract AvatarNFT is ERC721, Ownable, ReentrancyGuard {
             merkleRoot: 0x00,
             supply: 55,
             maxAmountPerAddress: 1,
-            cost: 0.05 ether,
-            minted: 0
+            cost: 0.05 ether
         });
 
         avatar[TierAvatar.epic] = NftAvatarSpec({
@@ -61,8 +62,7 @@ contract AvatarNFT is ERC721, Ownable, ReentrancyGuard {
             merkleRoot: 0x00,
             supply: 945,
             maxAmountPerAddress: 3,
-            cost: 0.03 ether,
-            minted: 0
+            cost: 0.03 ether
         });
 
         avatar[TierAvatar.rare] = NftAvatarSpec({
@@ -70,8 +70,7 @@ contract AvatarNFT is ERC721, Ownable, ReentrancyGuard {
             merkleRoot: 0x00,
             supply: 2000,
             maxAmountPerAddress: 5,
-            cost: 0.01 ether,
-            minted: 0
+            cost: 0.01 ether
         });
     }
 
@@ -120,44 +119,41 @@ contract AvatarNFT is ERC721, Ownable, ReentrancyGuard {
         if (msg.value < _totalCost) {
             revert InsufficientFunds();
         }
-        uint256 _totalMinted = avatar[_tier].minted + _mintAmount;
-        if (_totalMinted > avatar[_tier].supply) {
-            revert SupplyExceedeed();
-        }
-        _addressClaim[_to][_tier] += _mintAmount;
-        avatar[_tier].minted += _mintAmount;
     }
 
     // ===================================================================
     //                                MINT
     // ===================================================================
-    function mintLegendary(
-        bytes32[] calldata merkleProof
-    )
-        external
-        payable
-    {
+    function mintLegendary(bytes32[] calldata merkleProof) external payable {
         _isMintOpen(TierAvatar.legendary);
         _verifyWhitelist(TierAvatar.legendary, merkleProof);
         _mintCompliance(TierAvatar.legendary, msg.sender, 1);
-        _counterTokenIdLegendary++;
+        uint256 _totalMinted = _mintedTokenIdLegendary++;
+        if (_totalMinted > avatar[TierAvatar.legendary].supply) {
+            revert SupplyExceedeed();
+        }
+        _addressClaim[msg.sender][TierAvatar.legendary]++;
         uint256 _tokenId = _counterTokenIdLegendary;
+        _counterTokenIdLegendary++;
         _mint(msg.sender, _tokenId);
     }
 
     function mintEpic(
         uint256 mintAmount,
         bytes32[] calldata merkleProof
-    )
-        external
-        payable
-    {
+    ) external payable {
         _isMintOpen(TierAvatar.epic);
         _verifyWhitelist(TierAvatar.epic, merkleProof);
         _mintCompliance(TierAvatar.epic, msg.sender, mintAmount);
+        uint256 _totalMinted = _mintedTokenIdEpic + mintAmount;
+        if (_totalMinted > avatar[TierAvatar.epic].supply) {
+            revert SupplyExceedeed();
+        }
+        _addressClaim[msg.sender][TierAvatar.epic] += mintAmount;
+        _mintedTokenIdEpic += mintAmount;
         for (uint256 i = 0; i < mintAmount; ) {
-            _counterTokenIdEpic++;
             uint256 _tokenId = _counterTokenIdEpic;
+            _counterTokenIdEpic++;
             _mint(msg.sender, _tokenId);
             unchecked {
                 ++i;
@@ -165,14 +161,18 @@ contract AvatarNFT is ERC721, Ownable, ReentrancyGuard {
         }
     }
 
-    function mintRare(
-        uint256 mintAmount
-    ) external payable {
+    function mintRare(uint256 mintAmount) external payable {
         _isMintOpen(TierAvatar.rare);
         _mintCompliance(TierAvatar.rare, msg.sender, mintAmount);
+        uint256 _totalMinted = _mintedTokenIdRare + mintAmount;
+        if (_totalMinted > avatar[TierAvatar.rare].supply) {
+            revert SupplyExceedeed();
+        }
+        _addressClaim[msg.sender][TierAvatar.rare] += mintAmount;
+        _mintedTokenIdRare += mintAmount;
         for (uint256 i = 0; i < mintAmount; ) {
-            _counterTokenIdRare++;
             uint256 _tokenId = _counterTokenIdRare;
+            _counterTokenIdRare++;
             _mint(msg.sender, _tokenId);
             unchecked {
                 ++i;
