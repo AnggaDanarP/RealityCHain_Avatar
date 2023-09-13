@@ -13,7 +13,7 @@ const CollectionConfig: CollectionConfigInterface = {
     tokenSymbol: "NAT",
     hiddenMetadata: "",
     contractAddress: "0xF3a2bBd09d38bf120a940F965266034248eC0F84",
-    AirdropcontractAddress: "",
+    AirdropcontractAddress: "0xe10F8BAa0644718c8f3389ae836F5C45b9055eEc",
     marketplaceIdentifier: "Reality-Chain",
     marketplaceConfig: Marketpalce.openSea,
     legendaryAddress,
